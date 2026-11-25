@@ -1,0 +1,2138 @@
+<!DOCTYPE html>
+<html lang="tr" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkyBlock Yatırım Takipçisi | Bazaar & AH Alarm</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Tone.js for subtle alert sound -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        obsidian: '#0b0f19',
+                        discord: '#5865F2',
+                        discordHover: '#4752C4',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #0b0f19;
+            color: #f3f4f6;
+            background-image:
+                radial-gradient(at 0% 0%, rgba(245, 158, 11, 0.09) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(88, 101, 242, 0.09) 0px, transparent 50%);
+            min-height: 100vh;
+        }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #0b0f19; }
+        ::-webkit-scrollbar-thumb { background: #1f2937; border-radius: 9999px; }
+        ::-webkit-scrollbar-thumb:hover { background: #374151; }
+
+        @keyframes glowEmerald {
+            0%, 100% { box-shadow: 0 0 15px rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.6); }
+            50% { box-shadow: 0 0 28px rgba(16, 185, 129, 0.35); border-color: rgba(16, 185, 129, 1); }
+        }
+        .target-reached-card {
+            animation: glowEmerald 2.5s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="antialiased selection:bg-amber-500/30 selection:text-amber-200 pb-16">
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-3 max-w-sm w-full pointer-events-none px-4 sm:px-0"></div>
+
+    <!-- AUTH OVERLAY (GİRİŞ & KAYIT EKRANI) -->
+    <div id="auth-overlay" class="fixed inset-0 z-50 bg-[#0b0f19]/95 backdrop-blur-xl flex items-center justify-center p-4">
+        <div class="w-full max-w-md bg-gray-900/90 border border-gray-800 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
+            <!-- Decorative Glow -->
+            <div class="absolute -top-24 -right-24 w-48 h-48 bg-amber-500/15 rounded-full blur-3xl pointer-events-none"></div>
+            <div class="absolute -bottom-24 -left-24 w-48 h-48 bg-[#5865F2]/15 rounded-full blur-3xl pointer-events-none"></div>
+
+            <!-- Language Toggle Top Right -->
+            <div class="flex justify-end mb-2 relative z-10">
+                <div class="inline-flex p-1 rounded-xl bg-gray-950 border border-gray-800 text-xs font-bold">
+                    <button type="button" onclick="setLanguage('tr')" data-lang-btn="tr" class="px-2.5 py-1 rounded-lg bg-amber-500 text-gray-950 transition">TR</button>
+                    <button type="button" onclick="setLanguage('en')" data-lang-btn="en" class="px-2.5 py-1 rounded-lg text-gray-400 hover:text-white transition">EN</button>
+                </div>
+            </div>
+
+            <!-- Logo & Header -->
+            <div class="flex flex-col items-center text-center mb-6 relative">
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/25 text-gray-950 mb-3">
+                    <i data-lucide="coins" class="w-7 h-7 stroke-[2.5]"></i>
+                </div>
+                <h2 data-i18n="appTitle" class="text-xl font-extrabold text-white tracking-tight">SkyBlock Yatırım Takipçisi</h2>
+                <p data-i18n="authSubtitle" class="text-xs text-gray-400 mt-1">Kişisel portföyüne ve Discord alarmlarına eriş</p>
+            </div>
+
+            <!-- Auth Tabs -->
+            <div class="grid grid-cols-2 gap-1.5 p-1 bg-gray-950 rounded-xl border border-gray-800 mb-6 relative">
+                <button type="button" id="auth-tab-login" onclick="switchAuthTab('login')" class="py-2 rounded-lg text-xs font-bold bg-amber-500 text-gray-950 shadow transition flex items-center justify-center gap-1.5">
+                    <i data-lucide="log-in" class="w-3.5 h-3.5"></i>
+                    <span data-i18n="tabLogin">Giriş Yap</span>
+                </button>
+                <button type="button" id="auth-tab-register" onclick="switchAuthTab('register')" class="py-2 rounded-lg text-xs font-bold text-gray-400 hover:text-white transition flex items-center justify-center gap-1.5">
+                    <i data-lucide="user-plus" class="w-3.5 h-3.5"></i>
+                    <span data-i18n="tabRegister">Kayıt Ol</span>
+                </button>
+            </div>
+
+            <!-- Login Form -->
+            <form id="auth-login-form" onsubmit="handleLoginSubmit(event)" class="space-y-4 relative">
+                <div>
+                    <label data-i18n="usernameLabel" class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Kullanıcı Adı</label>
+                    <div class="relative">
+                        <i data-lucide="user" class="w-4 h-4 text-gray-500 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+                        <input type="text" id="login-username" required autocomplete="username" data-i18n-placeholder="usernamePlaceholder" placeholder="Kullanıcı adın"
+                            class="w-full bg-gray-950 border border-gray-700 focus:border-amber-500 rounded-xl pl-10 pr-3.5 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none transition">
+                    </div>
+                </div>
+                <div>
+                    <label data-i18n="passwordLabel" class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Şifre</label>
+                    <div class="relative">
+                        <i data-lucide="lock" class="w-4 h-4 text-gray-500 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+                        <input type="password" id="login-password" required autocomplete="current-password" placeholder="••••••••"
+                            class="w-full bg-gray-950 border border-gray-700 focus:border-amber-500 rounded-xl pl-10 pr-3.5 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none transition">
+                    </div>
+                </div>
+                <div class="flex items-center justify-between">
+                    <label class="flex items-center gap-2 cursor-pointer text-xs text-gray-300 select-none">
+                        <input type="checkbox" id="login-remember" checked class="w-4 h-4 rounded bg-gray-950 border-gray-700 text-amber-500 focus:ring-amber-500">
+                        <span data-i18n="rememberMe">Beni hatırla</span>
+                    </label>
+                </div>
+                <div id="login-error-box" class="hidden text-xs text-rose-400 bg-rose-500/10 border border-rose-500/30 rounded-xl px-3 py-2"></div>
+                <button type="submit" data-i18n="loginSubmit" class="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-gray-950 font-extrabold text-sm shadow-lg shadow-amber-500/20 transition">
+                    Panele Giriş Yap
+                </button>
+            </form>
+
+            <!-- Register Form -->
+            <form id="auth-register-form" onsubmit="handleRegisterSubmit(event)" class="hidden space-y-4 relative">
+                <div>
+                    <label data-i18n="usernameLabel" class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Kullanıcı Adı</label>
+                    <div class="relative">
+                        <i data-lucide="user-check" class="w-4 h-4 text-gray-500 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+                        <input type="text" id="reg-username" required minlength="3" autocomplete="username" data-i18n-placeholder="regUsernamePlaceholder" placeholder="En az 3 karakter"
+                            class="w-full bg-gray-950 border border-gray-700 focus:border-amber-500 rounded-xl pl-10 pr-3.5 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none transition">
+                    </div>
+                </div>
+                <div>
+                    <label data-i18n="passwordLabel" class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Şifre</label>
+                    <div class="relative">
+                        <i data-lucide="key-round" class="w-4 h-4 text-gray-500 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+                        <input type="password" id="reg-password" required minlength="4" autocomplete="new-password" data-i18n-placeholder="regPasswordPlaceholder" placeholder="En az 4 karakter"
+                            class="w-full bg-gray-950 border border-gray-700 focus:border-amber-500 rounded-xl pl-10 pr-3.5 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none transition">
+                    </div>
+                </div>
+                <div>
+                    <label data-i18n="confirmPasswordLabel" class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Şifre Tekrar</label>
+                    <div class="relative">
+                        <i data-lucide="shield-check" class="w-4 h-4 text-gray-500 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+                        <input type="password" id="reg-password-confirm" required minlength="4" autocomplete="new-password" data-i18n-placeholder="regConfirmPlaceholder" placeholder="Şifreni tekrar gir"
+                            class="w-full bg-gray-950 border border-gray-700 focus:border-amber-500 rounded-xl pl-10 pr-3.5 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none transition">
+                    </div>
+                </div>
+                <div id="register-error-box" class="hidden text-xs text-rose-400 bg-rose-500/10 border border-rose-500/30 rounded-xl px-3 py-2"></div>
+                <button type="submit" data-i18n="registerSubmit" class="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-gray-950 font-extrabold text-sm shadow-lg shadow-emerald-500/20 transition">
+                    Hesap Oluştur ve Başla
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- APP WRAPPER -->
+    <div id="app-wrapper" class="hidden">
+
+        <!-- Top Navigation / Header -->
+        <header class="border-b border-gray-800/80 bg-[#0b0f19]/90 backdrop-blur-md sticky top-0 z-40">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+                <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                    <!-- Brand -->
+                    <div class="flex items-center gap-3">
+                        <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/20 text-gray-950 shrink-0">
+                            <i data-lucide="coins" class="w-6 h-6 stroke-[2.5]"></i>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h1 data-i18n="appTitle" class="text-lg sm:text-xl font-extrabold tracking-tight text-white">SkyBlock Yatırım Takipçisi</h1>
+                                <span class="px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30">Bazaar & AH</span>
+                            </div>
+                            <p data-i18n="appSubtitle" class="text-xs text-gray-400">Canlı Hypixel Piyasa Takibi & Otomatik Discord Webhook Alarmı</p>
+                        </div>
+                    </div>
+
+                    <!-- Live Status & Controls -->
+                    <div class="flex flex-wrap items-center gap-2.5">
+                        <!-- Language Switcher -->
+                        <div class="inline-flex p-1 rounded-xl bg-gray-900 border border-gray-700/80 text-xs font-bold">
+                            <button type="button" onclick="setLanguage('tr')" data-lang-btn="tr" class="px-2.5 py-1 rounded-lg bg-amber-500 text-gray-950 transition">TR</button>
+                            <button type="button" onclick="setLanguage('en')" data-lang-btn="en" class="px-2.5 py-1 rounded-lg text-gray-400 hover:text-white transition">EN</button>
+                        </div>
+
+                        <!-- Sound Toggle -->
+                        <button id="sound-toggle-btn" onclick="toggleSound()" class="px-3 py-2 rounded-xl bg-gray-800/80 hover:bg-gray-800 border border-gray-700/80 text-xs font-medium text-gray-300 flex items-center gap-2 transition">
+                            <i id="sound-icon" data-lucide="volume-2" class="w-4 h-4 text-amber-400"></i>
+                            <span class="hidden sm:inline" id="sound-label">Ses Açık</span>
+                        </button>
+
+                        <!-- Auto Refresh Selector -->
+                        <div class="flex items-center bg-gray-800/80 border border-gray-700/80 rounded-xl px-3 py-1.5 text-xs">
+                            <i data-lucide="history" class="w-3.5 h-3.5 text-amber-400 mr-1.5"></i>
+                            <span data-i18n="refreshLabel" class="text-gray-400 mr-1.5">Yenileme:</span>
+                            <select id="refresh-interval" onchange="updateRefreshInterval()" class="bg-transparent text-white font-semibold focus:outline-none cursor-pointer">
+                                <option value="30" class="bg-gray-900" data-i18n="sec30">30 sn</option>
+                                <option value="60" selected class="bg-gray-900" data-i18n="min1">1 dk</option>
+                                <option value="300" class="bg-gray-900" data-i18n="min5">5 dk</option>
+                                <option value="0" class="bg-gray-900" data-i18n="manual">Manuel</option>
+                            </select>
+                            <span id="countdown-badge" class="ml-2 px-1.5 py-0.5 rounded bg-gray-900 text-amber-400 font-mono text-[11px]">60s</span>
+                        </div>
+
+                        <!-- Manual Refresh Button -->
+                        <button id="manual-refresh-btn" onclick="fetchAllMarketData(true)" class="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-gray-950 font-bold text-xs flex items-center gap-2 transition shadow-md shadow-amber-500/15 active:scale-95">
+                            <i id="refresh-spinner" data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                            <span data-i18n="updatePricesBtn">Fiyatları Güncelle</span>
+                        </button>
+
+                        <!-- Active User Badge & Logout -->
+                        <div class="flex items-center gap-2 pl-2 border-l border-gray-800">
+                            <div class="px-3 py-1.5 rounded-xl bg-gray-900 border border-gray-700/80 text-xs font-semibold text-amber-300 flex items-center gap-1.5">
+                                <i data-lucide="user-circle" class="w-4 h-4 text-amber-400"></i>
+                                <span id="header-username-badge">user</span>
+                            </div>
+                            <button onclick="logoutUser()" class="px-3 py-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 text-xs font-bold flex items-center gap-1.5 transition">
+                                <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+                                <span class="hidden sm:inline" data-i18n="logoutBtn">Çıkış Yap</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 space-y-6">
+
+            <!-- API Status Bar & Guide Toggle -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gray-900/70 border border-gray-800 rounded-2xl px-4 py-3 text-xs">
+                <div class="flex flex-wrap items-center gap-4">
+                    <div class="flex items-center gap-2">
+                        <span id="bazaar-status-dot" class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span>
+                        <span class="text-gray-400">Bazaar API:</span>
+                        <span id="bazaar-status-text" class="font-semibold text-gray-200">...</span>
+                    </div>
+                    <div class="hidden sm:block text-gray-700">|</div>
+                    <div class="flex items-center gap-2">
+                        <span id="ah-status-dot" class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span>
+                        <span class="text-gray-400">AH Lowest BIN API:</span>
+                        <span id="ah-status-text" class="font-semibold text-gray-200">...</span>
+                    </div>
+                    <div class="hidden md:block text-gray-700">|</div>
+                    <div class="text-gray-500" id="last-updated-text">-</div>
+                </div>
+
+                <button onclick="toggleGuide()" class="text-amber-400 hover:text-amber-300 font-semibold flex items-center gap-1.5 self-start sm:self-auto transition">
+                    <i data-lucide="help-circle" class="w-4 h-4"></i>
+                    <span data-i18n="guideToggle">Nasıl Kullanılır & Discord Webhook Rehberi</span>
+                    <i id="guide-chevron" data-lucide="chevron-down" class="w-3.5 h-3.5 transition-transform"></i>
+                </button>
+            </div>
+
+            <!-- Collapsible Guide Section -->
+            <div id="guide-panel" class="hidden bg-gray-900/90 border border-amber-500/30 rounded-2xl p-5 text-sm space-y-4 shadow-xl">
+                <div class="flex items-center justify-between border-b border-gray-800 pb-3">
+                    <h3 class="font-bold text-amber-400 flex items-center gap-2 text-base">
+                        <i data-lucide="webhook" class="w-5 h-5 text-discord"></i>
+                        <span data-i18n="guideTitle">Hızlı Başlangıç & Discord Webhook Kurulumu</span>
+                    </h3>
+                    <button onclick="toggleGuide()" class="text-gray-400 hover:text-white p-1">
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-gray-300 text-xs leading-relaxed">
+                    <div class="bg-gray-950/60 p-4 rounded-xl border border-gray-800">
+                        <div class="font-bold text-white mb-1.5 flex items-center gap-2">
+                            <span class="w-5 h-5 rounded-full bg-discord text-white flex items-center justify-center text-[11px]">1</span>
+                            <span data-i18n="guideStep1Title">Discord Webhook URL Alma</span>
+                        </div>
+                        <p data-i18n="guideStep1Desc" class="text-gray-400">Discord sunucunda Kanalı Düzenle &gt; Entegrasyonlar &gt; Webhook'lar &gt; Yeni Webhook yolunu izle ve Webhook URL'sini kopyalayıp aşağıdaki kutuya kaydet.</p>
+                    </div>
+                    <div class="bg-gray-950/60 p-4 rounded-xl border border-gray-800">
+                        <div class="font-bold text-white mb-1.5 flex items-center gap-2">
+                            <span class="w-5 h-5 rounded-full bg-amber-500 text-gray-950 flex items-center justify-center text-[11px]">2</span>
+                            <span data-i18n="guideStep2Title">Yatırım Ekleme & Kısaltmalar</span>
+                        </div>
+                        <p data-i18n="guideStep2Desc" class="text-gray-400">Bazaar veya Auction House seçip eşya adını arat. Alış ve Hedef fiyatına 12.5m, 450k veya 1.2b gibi SkyBlock kısaltmaları yazabilirsin.</p>
+                    </div>
+                    <div class="bg-gray-950/60 p-4 rounded-xl border border-gray-800">
+                        <div class="font-bold text-white mb-1.5 flex items-center gap-2">
+                            <span class="w-5 h-5 rounded-full bg-emerald-500 text-gray-950 flex items-center justify-center text-[11px]">3</span>
+                            <span data-i18n="guideStep3Title">Otomatik Alarm & Simülasyon</span>
+                        </div>
+                        <p data-i18n="guideStep3Desc" class="text-gray-400">Eşya hedef fiyata ulaştığında Discord'a kâr detaylarını içeren mesaj atar. Her karttaki deney tüpü ikonu ile alarmı anında test edebilirsin.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Portfolio Summary Cards -->
+            <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- Total Invested -->
+                <div class="bg-gray-900/90 border border-gray-800 rounded-2xl p-5 shadow-lg">
+                    <div class="flex items-center justify-between text-gray-400 text-xs font-medium mb-2">
+                        <span data-i18n="statTotalInvested">TOPLAM YATIRIM</span>
+                        <div class="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center">
+                            <i data-lucide="wallet" class="w-4 h-4"></i>
+                        </div>
+                    </div>
+                    <div id="stat-total-invested" class="text-2xl font-extrabold font-mono text-white tracking-tight">0 Coins</div>
+                    <div id="stat-total-invested-exact" class="text-xs text-gray-500 font-mono mt-1">0</div>
+                </div>
+
+                <!-- Current Value -->
+                <div class="bg-gray-900/90 border border-gray-800 rounded-2xl p-5 shadow-lg">
+                    <div class="flex items-center justify-between text-gray-400 text-xs font-medium mb-2">
+                        <span data-i18n="statCurrentValue">GÜNCEL PORTFÖY DEĞERİ</span>
+                        <div class="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center">
+                            <i data-lucide="landmark" class="w-4 h-4"></i>
+                        </div>
+                    </div>
+                    <div id="stat-current-value" class="text-2xl font-extrabold font-mono text-amber-400 tracking-tight">0 Coins</div>
+                    <div id="stat-current-value-exact" class="text-xs text-gray-500 font-mono mt-1">0</div>
+                </div>
+
+                <!-- Net Profit / Loss -->
+                <div class="bg-gray-900/90 border border-gray-800 rounded-2xl p-5 shadow-lg">
+                    <div class="flex items-center justify-between text-gray-400 text-xs font-medium mb-2">
+                        <span data-i18n="statNetPnl">NET KÂR / ZARAR</span>
+                        <div id="stat-pnl-icon-bg" class="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
+                            <i id="stat-pnl-icon" data-lucide="trending-up" class="w-4 h-4"></i>
+                        </div>
+                    </div>
+                    <div class="flex items-baseline gap-2">
+                        <div id="stat-net-pnl" class="text-2xl font-extrabold font-mono text-emerald-400 tracking-tight">+0 Coins</div>
+                        <span id="stat-pnl-percent" class="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400">+0.0%</span>
+                    </div>
+                    <div id="stat-net-pnl-exact" class="text-xs text-gray-500 font-mono mt-1">0</div>
+                </div>
+
+                <!-- Active Alerts -->
+                <div class="bg-gray-900/90 border border-gray-800 rounded-2xl p-5 shadow-lg">
+                    <div class="flex items-center justify-between text-gray-400 text-xs font-medium mb-2">
+                        <span data-i18n="statAlerts">ALARM DURUMU</span>
+                        <div class="w-8 h-8 rounded-lg bg-purple-500/10 text-purple-400 flex items-center justify-center">
+                            <i data-lucide="bell-ring" class="w-4 h-4"></i>
+                        </div>
+                    </div>
+                    <div class="flex items-baseline gap-2">
+                        <div id="stat-alerts-triggered" class="text-2xl font-extrabold font-mono text-white tracking-tight">0 / 0</div>
+                        <span data-i18n="statTargetReachedSub" class="text-xs text-gray-400">Hedefe Ulaşan</span>
+                    </div>
+                    <div id="stat-webhook-badge" class="text-xs text-amber-400/90 mt-1 flex items-center gap-1.5">
+                        <i data-lucide="radio" class="w-3.5 h-3.5"></i>
+                        <span data-i18n="webhookWaiting">Webhook bekleniyor</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Discord Webhook Configuration Bar -->
+            <section class="bg-gradient-to-r from-[#5865F2]/15 via-gray-900 to-gray-900 border border-[#5865F2]/40 rounded-2xl p-4 sm:p-5 shadow-lg">
+                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                    <div class="flex items-start sm:items-center gap-3.5">
+                        <div class="w-11 h-11 rounded-xl bg-[#5865F2] flex items-center justify-center text-white shrink-0 shadow-lg shadow-[#5865F2]/30">
+                            <i data-lucide="webhook" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-base font-bold text-white flex items-center gap-2">
+                                <span data-i18n="webhookTitle">Discord Webhook Bildirim Ayarı</span>
+                                <span id="webhook-connected-pill" data-i18n="activeBadge" class="hidden px-2 py-0.5 text-[10px] font-bold uppercase rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Aktif</span>
+                            </h2>
+                            <p data-i18n="webhookSubtitle" class="text-xs text-gray-400">Hedef fiyata ulaşan eşyalar için sunucuna otomatik embed mesajı gönderilir.</p>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 flex-1 max-w-2xl">
+                        <div class="relative flex-1">
+                            <input type="password" id="webhook-url-input" placeholder="https://discord.com/api/webhooks/..."
+                                class="w-full bg-gray-950/90 border border-gray-700 focus:border-[#5865F2] rounded-xl pl-3.5 pr-10 py-2.5 text-xs sm:text-sm text-white placeholder-gray-500 focus:outline-none font-mono transition">
+                            <button type="button" onclick="toggleWebhookVisibility()" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200 text-xs">
+                                <i id="webhook-eye-icon" data-lucide="eye" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="saveWebhookUrl()" class="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-[#5865F2] hover:bg-[#4752C4] text-white font-semibold text-xs sm:text-sm transition shadow-md shadow-[#5865F2]/20 whitespace-nowrap flex items-center justify-center gap-1.5">
+                                <i data-lucide="save" class="w-4 h-4"></i>
+                                <span data-i18n="saveBtn">Kaydet</span>
+                            </button>
+                            <button onclick="sendTestWebhook()" id="test-webhook-btn" class="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-200 font-semibold text-xs sm:text-sm transition whitespace-nowrap flex items-center justify-center gap-1.5">
+                                <i data-lucide="send" class="w-4 h-4 text-[#5865F2]"></i>
+                                <span data-i18n="testSendBtn">Test Gönder</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Main Grid: Add Investment Form + Watchlist -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+                <!-- Left Column: Add New Investment Form (4 cols) -->
+                <div class="lg:col-span-4 bg-gray-900/95 border border-gray-800 rounded-2xl p-5 shadow-xl lg:sticky lg:top-24">
+                    <h2 class="text-base font-bold text-white mb-4 flex items-center gap-2 border-b border-gray-800 pb-3">
+                        <i data-lucide="plus-circle" class="w-4 h-4 text-amber-400"></i>
+                        <span data-i18n="addFormTitle">Yeni Yatırım / Alarm Ekle</span>
+                    </h2>
+
+                    <form id="add-investment-form" onsubmit="handleAddInvestment(event)" class="space-y-4">
+                        <!-- Market Type Selector -->
+                        <div>
+                            <label data-i18n="marketTypeLabel" class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Piyasa Türü</label>
+                            <div class="grid grid-cols-2 gap-2 p-1 bg-gray-950 rounded-xl border border-gray-800">
+                                <button type="button" id="type-bazaar-btn" onclick="setMarketType('BAZAAR')" class="py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 bg-amber-500 text-gray-950 shadow">
+                                    <i data-lucide="store" class="w-3.5 h-3.5"></i>
+                                    <span>Bazaar</span>
+                                </button>
+                                <button type="button" id="type-ah-btn" onclick="setMarketType('AH')" class="py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 text-gray-400 hover:text-white">
+                                    <i data-lucide="gavel" class="w-3.5 h-3.5"></i>
+                                    <span>Auction House</span>
+                                </button>
+                            </div>
+                            <input type="hidden" id="market-type-input" value="BAZAAR">
+                        </div>
+
+                        <!-- Item Name / ID with Autocomplete -->
+                        <div class="relative">
+                            <div class="flex items-center justify-between mb-1.5">
+                                <label for="item-search-input" data-i18n="itemNameLabel" class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Eşya Adı veya ID</label>
+                                <span id="api-item-count" class="text-[11px] text-amber-400/80 font-mono">...</span>
+                            </div>
+                            <div class="relative">
+                                <input type="text" id="item-search-input" autocomplete="off" required
+                                    data-i18n-placeholder="itemSearchPlaceholder"
+                                    placeholder="Örn: Booster Cookie, Recombobulator..."
+                                    oninput="handleItemSearchInput(this.value)"
+                                    onfocus="handleItemSearchInput(this.value)"
+                                    class="w-full bg-gray-950 border border-gray-700 focus:border-amber-500 rounded-xl pl-3.5 pr-9 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none transition">
+                                <i data-lucide="search" class="w-4 h-4 text-gray-500 absolute right-3 top-1/2 -translate-y-1/2"></i>
+                            </div>
+
+                            <!-- Autocomplete Dropdown -->
+                            <div id="autocomplete-dropdown" class="hidden absolute z-30 left-0 right-0 mt-1.5 bg-gray-950 border border-gray-700 rounded-xl shadow-2xl max-h-60 overflow-y-auto divide-y divide-gray-800/80"></div>
+
+                            <!-- Selected Item Live Preview Pill -->
+                            <div id="selected-item-preview" class="hidden mt-2 px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between text-xs">
+                                <div>
+                                    <span data-i18n="selectedIdLabel" class="text-gray-400">Seçili ID:</span>
+                                    <span id="preview-item-id" class="font-mono font-bold text-amber-300 ml-1"></span>
+                                </div>
+                                <div class="text-right">
+                                    <span data-i18n="liveLabel" class="text-gray-400">Anlık:</span>
+                                    <span id="preview-item-price" class="font-mono font-bold text-emerald-400 ml-1"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Quantity -->
+                        <div>
+                            <label for="quantity-input" data-i18n="quantityLabel" class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Adet (Miktar)</label>
+                            <input type="number" id="quantity-input" min="1" step="1" value="1" required
+                                class="w-full bg-gray-950 border border-gray-700 focus:border-amber-500 rounded-xl px-3.5 py-2.5 text-sm font-mono text-white focus:outline-none transition">
+                        </div>
+
+                        <!-- Buy Price & Target Price -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-3">
+                            <div>
+                                <div class="flex items-center justify-between mb-1.5">
+                                    <label for="buy-price-input" data-i18n="buyPriceLabel" class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Alış Fiyatı</label>
+                                    <button type="button" onclick="fillCurrentPriceToBuy()" data-i18n="fillLiveBtn" class="text-[11px] text-amber-400 hover:underline">Günceli Al</button>
+                                </div>
+                                <input type="text" id="buy-price-input" required data-i18n-placeholder="buyPlaceholder" placeholder="Örn: 11.5m"
+                                    oninput="updatePriceHelper('buy')"
+                                    class="w-full bg-gray-950 border border-gray-700 focus:border-amber-500 rounded-xl px-3.5 py-2.5 text-sm font-mono text-white placeholder-gray-600 focus:outline-none transition">
+                                <div id="buy-price-helper" class="text-[11px] font-mono text-gray-500 mt-1 h-4"></div>
+                            </div>
+
+                            <div>
+                                <div class="flex items-center justify-between mb-1.5">
+                                    <label for="target-price-input" data-i18n="targetPriceLabel" class="text-xs font-semibold text-emerald-400 uppercase tracking-wider">Hedef Fiyat</label>
+                                    <div class="flex gap-1.5 text-[10px]">
+                                        <button type="button" onclick="applyTargetMultiplier(1.10)" class="px-1.5 py-0.5 rounded bg-gray-800 hover:bg-gray-700 text-emerald-400 font-mono">+10%</button>
+                                        <button type="button" onclick="applyTargetMultiplier(1.25)" class="px-1.5 py-0.5 rounded bg-gray-800 hover:bg-gray-700 text-emerald-400 font-mono">+25%</button>
+                                    </div>
+                                </div>
+                                <input type="text" id="target-price-input" required data-i18n-placeholder="targetPlaceholder" placeholder="Örn: 14m"
+                                    oninput="updatePriceHelper('target')"
+                                    class="w-full bg-gray-950 border border-gray-700 focus:border-emerald-500 rounded-xl px-3.5 py-2.5 text-sm font-mono text-white placeholder-gray-600 focus:outline-none transition">
+                                <div id="target-price-helper" class="text-[11px] font-mono text-emerald-500/80 mt-1 h-4"></div>
+                            </div>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <button type="submit" class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-gray-950 font-extrabold text-sm shadow-lg shadow-amber-500/20 transition active:scale-[0.99] flex items-center justify-center gap-2">
+                            <i data-lucide="bell-plus" class="w-4 h-4"></i>
+                            <span data-i18n="addSubmitBtn">Takibe Al & Alarm Kur</span>
+                        </button>
+                    </form>
+
+                    <!-- Quick Presets -->
+                    <div class="mt-5 pt-4 border-t border-gray-800">
+                        <div data-i18n="presetsTitle" class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-2">Popüler Yatırım Kısayolları</div>
+                        <div class="flex flex-wrap gap-1.5">
+                            <button type="button" onclick="quickFillPreset('BAZAAR', 'BOOSTER_COOKIE', 'Booster Cookie')" class="px-2.5 py-1 rounded-lg bg-gray-800/80 hover:bg-gray-800 text-xs text-gray-300 border border-gray-700/60 transition">🍪 Booster Cookie</button>
+                            <button type="button" onclick="quickFillPreset('BAZAAR', 'RECOMBOBULATOR_3000', 'Recombobulator 3000')" class="px-2.5 py-1 rounded-lg bg-gray-800/80 hover:bg-gray-800 text-xs text-gray-300 border border-gray-700/60 transition">🔮 Recombobulator</button>
+                            <button type="button" onclick="quickFillPreset('BAZAAR', 'STOCK_OF_STONKS', 'Stock of Stonks')" class="px-2.5 py-1 rounded-lg bg-gray-800/80 hover:bg-gray-800 text-xs text-gray-300 border border-gray-700/60 transition">📈 Stock of Stonks</button>
+                            <button type="button" onclick="quickFillPreset('AH', 'WARDEN_HELMET', 'Warden Helmet')" class="px-2.5 py-1 rounded-lg bg-gray-800/80 hover:bg-gray-800 text-xs text-gray-300 border border-gray-700/60 transition">🪖 Warden Helmet</button>
+                            <button type="button" onclick="quickFillPreset('AH', 'HYPERION', 'Hyperion')" class="px-2.5 py-1 rounded-lg bg-gray-800/80 hover:bg-gray-800 text-xs text-gray-300 border border-gray-700/60 transition">⚔️ Hyperion</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Active Investments & Watchlist (8 cols) -->
+                <div class="lg:col-span-8 space-y-4">
+                    <!-- Filter & Actions Header -->
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gray-900/80 border border-gray-800 rounded-2xl px-4 py-3">
+                        <div class="flex items-center gap-2">
+                            <h2 data-i18n="watchlistTitle" class="text-base font-bold text-white">Takip Edilen Yatırımlar</h2>
+                            <span id="watchlist-count-badge" class="px-2.5 py-0.5 rounded-full bg-gray-800 text-amber-400 font-mono text-xs font-bold">0</span>
+                        </div>
+
+                        <div class="flex flex-wrap items-center gap-2">
+                            <div class="flex bg-gray-950 p-1 rounded-xl border border-gray-800 text-xs">
+                                <button onclick="setFilter('ALL')" id="filter-ALL" data-i18n="filterAll" class="px-3 py-1 rounded-lg font-semibold bg-gray-800 text-white transition">Tümü</button>
+                                <button onclick="setFilter('BAZAAR')" id="filter-BAZAAR" class="px-3 py-1 rounded-lg font-semibold text-gray-400 hover:text-white transition">Bazaar</button>
+                                <button onclick="setFilter('AH')" id="filter-AH" class="px-3 py-1 rounded-lg font-semibold text-gray-400 hover:text-white transition">AH</button>
+                                <button onclick="setFilter('REACHED')" id="filter-REACHED" data-i18n="filterReached" class="px-3 py-1 rounded-lg font-semibold text-gray-400 hover:text-white transition">Hedefe Ulaşan</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Investments List Container -->
+                    <div id="investments-list" class="space-y-3.5"></div>
+
+                    <!-- Empty State -->
+                    <div id="empty-state" class="hidden bg-gray-900/60 border border-dashed border-gray-800 rounded-2xl p-12 text-center">
+                        <div class="w-16 h-16 rounded-2xl bg-gray-800/80 text-amber-400 flex items-center justify-center mx-auto mb-4">
+                            <i data-lucide="line-chart" class="w-8 h-8"></i>
+                        </div>
+                        <h3 data-i18n="emptyTitle" class="text-lg font-bold text-white mb-1">Henüz takip edilen yatırım yok</h3>
+                        <p data-i18n="emptySubtitle" class="text-sm text-gray-400 max-w-md mx-auto">Sol taraftaki formdan Bazaar veya Auction House eşyası ekleyerek canlı fiyat takibini ve Discord bildirimlerini başlatabilirsin.</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Edit Target / Price Modal -->
+        <div id="edit-modal" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+            <div class="bg-gray-900 border border-gray-700 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+                <div class="flex items-center justify-between border-b border-gray-800 pb-3">
+                    <h3 class="text-base font-bold text-white flex items-center gap-2">
+                        <i data-lucide="edit-3" class="w-4 h-4 text-amber-400"></i>
+                        <span id="edit-modal-title">Yatırımı Düzenle</span>
+                    </h3>
+                    <button onclick="closeEditModal()" class="text-gray-400 hover:text-white">
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>
+                </div>
+                <input type="hidden" id="edit-item-uid">
+                <div class="space-y-3">
+                    <div>
+                        <label data-i18n="quantityLabel" class="block text-xs font-semibold text-gray-400 uppercase mb-1">Adet</label>
+                        <input type="number" id="edit-quantity" min="1" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3.5 py-2 text-sm font-mono text-white">
+                    </div>
+                    <div>
+                        <label data-i18n="buyPriceLabel" class="block text-xs font-semibold text-gray-400 uppercase mb-1">Alış Fiyatı (Coins)</label>
+                        <input type="text" id="edit-buy-price" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3.5 py-2 text-sm font-mono text-white">
+                    </div>
+                    <div>
+                        <label data-i18n="targetPriceLabel" class="block text-xs font-semibold text-emerald-400 uppercase mb-1">Hedef Fiyat (Coins)</label>
+                        <input type="text" id="edit-target-price" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-3.5 py-2 text-sm font-mono text-white">
+                    </div>
+                </div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button onclick="closeEditModal()" data-i18n="cancelBtn" class="px-4 py-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-xs font-semibold text-gray-300">İptal</button>
+                    <button onclick="saveEditedInvestment()" data-i18n="saveChangesBtn" class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-xs font-bold text-gray-950">Değişiklikleri Kaydet</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // I18N TRANSLATION DICTIONARY (TR / EN)
+        // ==========================================
+        const I18N = {
+            tr: {
+                pageTitle: 'SkyBlock Yatırım Takipçisi | Bazaar & AH Alarm',
+                appTitle: 'SkyBlock Yatırım Takipçisi',
+                appSubtitle: 'Canlı Hypixel Piyasa Takibi & Otomatik Discord Webhook Alarmı',
+                authSubtitle: 'Kişisel portföyüne ve Discord alarmlarına eriş',
+                tabLogin: 'Giriş Yap',
+                tabRegister: 'Kayıt Ol',
+                usernameLabel: 'Kullanıcı Adı',
+                usernamePlaceholder: 'Kullanıcı adın',
+                regUsernamePlaceholder: 'En az 3 karakter',
+                passwordLabel: 'Şifre',
+                regPasswordPlaceholder: 'En az 4 karakter',
+                confirmPasswordLabel: 'Şifre Tekrar',
+                regConfirmPlaceholder: 'Şifreni tekrar gir',
+                rememberMe: 'Beni hatırla',
+                loginSubmit: 'Panele Giriş Yap',
+                registerSubmit: 'Hesap Oluştur ve Başla',
+                errInvalidUsername: 'Kullanıcı adı 3-24 karakter olmalı (harf, rakam, _, ., -).',
+                errPasswordMismatch: 'Girdiğin şifreler birbiriyle eşleşmiyor.',
+                errUserExists: 'Bu kullanıcı adı zaten kayıtlı. Giriş Yap sekmesini kullanabilirsin.',
+                errUserNotFound: 'Kullanıcı bulunamadı. Önce "Kayıt Ol" sekmesinden hesap açmalısın.',
+                errWrongPassword: 'Hatalı şifre girdin.',
+                soundOn: 'Ses Açık',
+                soundOff: 'Ses Kapalı',
+                refreshLabel: 'Yenileme:',
+                sec30: '30 sn',
+                min1: '1 dk',
+                min5: '5 dk',
+                manual: 'Manuel',
+                manualOff: 'Kapalı',
+                updatePricesBtn: 'Fiyatları Güncelle',
+                logoutBtn: 'Çıkış Yap',
+                apiConnecting: 'Bağlanıyor...',
+                apiOnline: 'Çevrimiçi ({n} eşya)',
+                apiError: 'Bağlantı Hatası',
+                lastUpdated: 'Son güncelleme: {t}',
+                guideToggle: 'Nasıl Kullanılır & Discord Webhook Rehberi',
+                guideTitle: 'Hızlı Başlangıç & Discord Webhook Kurulumu',
+                guideStep1Title: 'Discord Webhook URL Alma',
+                guideStep1Desc: 'Discord sunucunda Kanalı Düzenle > Entegrasyonlar > Webhook\'lar > Yeni Webhook yolunu izle ve Webhook URL\'sini kopyalayıp aşağıdaki kutuya kaydet.',
+                guideStep2Title: 'Yatırım Ekleme & Kısaltmalar',
+                guideStep2Desc: 'Bazaar veya Auction House seçip eşya adını arat. Alış ve Hedef fiyatına 12.5m, 450k veya 1.2b gibi SkyBlock kısaltmaları yazabilirsin.',
+                guideStep3Title: 'Otomatik Alarm & Simülasyon',
+                guideStep3Desc: 'Eşya hedef fiyata ulaştığında Discord\'a kâr detaylarını içeren mesaj atar. Her karttaki deney tüpü ikonu ile alarmı anında test edebilirsin.',
+                statTotalInvested: 'TOPLAM YATIRIM',
+                statCurrentValue: 'GÜNCEL PORTFÖY DEĞERİ',
+                statNetPnl: 'NET KÂR / ZARAR',
+                statAlerts: 'ALARM DURUMU',
+                statTargetReachedSub: 'Hedefe Ulaşan',
+                webhookWaiting: 'Webhook bekleniyor',
+                webhookConnected: 'Discord Webhook Bağlı',
+                webhookTitle: 'Discord Webhook Bildirim Ayarı',
+                activeBadge: 'Aktif',
+                webhookSubtitle: 'Hedef fiyata ulaşan eşyalar için sunucuna otomatik embed mesajı gönderilir.',
+                saveBtn: 'Kaydet',
+                testSendBtn: 'Test Gönder',
+                sendingBtn: 'Gönderiliyor...',
+                addFormTitle: 'Yeni Yatırım / Alarm Ekle',
+                marketTypeLabel: 'Piyasa Türü',
+                itemNameLabel: 'Eşya Adı veya ID',
+                itemSearchPlaceholder: 'Örn: Booster Cookie, Recombobulator...',
+                liveItemsCount: '{n} canlı eşya',
+                offlineItemsCount: 'Manuel / Çevrimdışı',
+                selectedIdLabel: 'Seçili ID:',
+                liveLabel: 'Anlık:',
+                quantityLabel: 'Adet (Miktar)',
+                buyPriceLabel: 'Alış Fiyatı',
+                fillLiveBtn: 'Günceli Al',
+                buyPlaceholder: 'Örn: 11.5m',
+                targetPriceLabel: 'Hedef Fiyat',
+                targetPlaceholder: 'Örn: 14m',
+                addSubmitBtn: 'Takibe Al & Alarm Kur',
+                presetsTitle: 'Popüler Yatırım Kısayolları',
+                watchlistTitle: 'Takip Edilen Yatırımlar',
+                filterAll: 'Tümü',
+                filterReached: 'Hedefe Ulaşan',
+                emptyTitle: 'Henüz takip edilen yatırım yok',
+                emptySubtitle: 'Sol taraftaki formdan Bazaar veya Auction House eşyası ekleyerek canlı fiyat takibini ve Discord bildirimlerini başlatabilirsin.',
+                cardSimulation: 'Simülasyon',
+                cardTargetReached: 'HEDEF ULAŞILDI!',
+                cardRealPrice: 'Gerçek Fiyat',
+                cardTestAlert: 'Alarm Testi',
+                cardBuyEach: 'Alış (Adet)',
+                cardCurrentEach: 'Güncel (Adet)',
+                cardTargetPrice: 'Hedef Fiyat',
+                cardTotalPnl: 'Toplam Kâr/Zarar',
+                cardTargetProgress: 'Hedef İlerlemesi',
+                editModalTitle: '{name} Düzenle',
+                cancelBtn: 'İptal',
+                saveChangesBtn: 'Değişiklikleri Kaydet',
+                toastLogoutTitle: 'Çıkış Yapıldı',
+                toastLogoutMsg: 'Hesabından güvenli çıkış yaptın.',
+                toastMarketUpdatedTitle: 'Piyasa Güncellendi',
+                toastMarketUpdatedMsg: 'Bazaar ve Auction House fiyatları yenilendi.',
+                toastTargetHitTitle: 'Hedef Fiyata Ulaşıldı!',
+                toastTargetHitMsg: '<b>{name}</b> güncel fiyatı <b>{price}</b> oldu!',
+                toastWebhookMissingTitle: 'Discord Webhook Eksik',
+                toastWebhookMissingMsg: 'Hedefe ulaşıldı ancak Discord Webhook URL girilmediği için mesaj atılamadı.',
+                toastDiscordSentTitle: 'Discord Bildirimi Gönderildi',
+                toastDiscordSentMsg: '{name} için sunucuna mesaj iletildi.',
+                toastDiscordErrTitle: 'Discord Gönderim Hatası',
+                toastDiscordErrMsg: 'Webhook URL geçersiz olabilir veya Discord isteği reddetti.',
+                toastWebhookClearedTitle: 'Webhook Temizlendi',
+                toastWebhookClearedMsg: 'Kayıtlı Discord Webhook adresi kaldırıldı.',
+                toastInvalidUrlTitle: 'Geçersiz URL',
+                toastInvalidUrlMsg: 'Lütfen geçerli bir Discord Webhook URL adresi girin.',
+                toastWebhookSavedTitle: 'Webhook Kaydedildi',
+                toastWebhookSavedMsg: 'Discord bildirim kanalın hesabına bağlandı!',
+                toastWebhookRequiredTitle: 'Webhook URL Gerekli',
+                toastWebhookRequiredMsg: 'Önce Discord Webhook URL adresini yapıştırın.',
+                toastTestSuccessTitle: 'Test Mesajı Başarılı!',
+                toastTestSuccessMsg: 'Discord kanalını kontrol et, bildirim ulaştı.',
+                toastNoItemTitle: 'Eşya Seçilmedi',
+                toastNoItemMsg: 'Önce listeden bir eşya seçin.',
+                toastEnterBuyTitle: 'Alış Fiyatı Girin',
+                toastEnterBuyMsg: 'Önce geçerli bir alış fiyatı yazın.',
+                toastInvalidFormTitle: 'Eksik veya Hatalı Bilgi',
+                toastInvalidFormMsg: 'Lütfen tüm alanları geçerli değerlerle doldurun.',
+                toastAddedTitle: 'Yatırım Eklendi',
+                toastAddedMsg: '<b>{name}</b> takibe alındı.',
+                toastSimOffTitle: 'Simülasyon Kapatıldı',
+                toastSimOffMsg: '{name} gerçek piyasa fiyatına döndü.',
+                toastAlertResetTitle: 'Alarm Sıfırlandı',
+                toastAlertResetMsg: '{name} tekrar hedef fiyata ulaştığında bildirim atacak.',
+                toastDeletedTitle: 'Silindi',
+                toastDeletedMsg: 'Yatırım takip listesinden kaldırıldı.',
+                toastUpdatedTitle: 'Güncellendi',
+                toastUpdatedMsg: '{name} yatırım bilgileri kaydedildi.',
+                // Discord Embed Translations
+                discordBotName: 'SkyBlock Yatırım Botu',
+                discordAlertTitle: '{prefix}Hedef Fiyata Ulaşıldı: {name}',
+                discordAlertDesc: '**{market}** piyasasında takip ettiğin eşya belirlediğin hedef fiyata ulaştı!',
+                discordFieldAccount: 'Hesap',
+                discordFieldBuy: 'Alış Fiyatı (Adet)',
+                discordFieldTarget: 'Hedef Fiyat (Adet)',
+                discordFieldCurrent: 'Güncel Fiyat (Adet)',
+                discordFieldQty: 'Adet',
+                discordFieldProfit: 'Toplam Net Kâr',
+                discordFooter: 'SkyBlock Yatırım Takipçisi • Anlık Piyasa Alarmı',
+                discordTestTitle: 'Bağlantı Başarılı! SkyBlock Alarm Sistemi Aktif',
+                discordTestDesc: 'Bu bir test mesajıdır. Takip ettiğin **Bazaar** veya **Auction House** yatırımları hedef fiyata ulaştığında bu kanala otomatik bildirim düşecektir.',
+                discordTestStatus: 'Durum',
+                discordTestStatusVal: 'Çevrimiçi & İzleniyor',
+                discordTestCount: 'Takip Edilen Eşya',
+                discordTestCountVal: '{n} Adet'
+            },
+            en: {
+                pageTitle: 'SkyBlock Investment Tracker | Bazaar & AH Alerts',
+                appTitle: 'SkyBlock Investment Tracker',
+                appSubtitle: 'Live Hypixel Market Tracking & Automated Discord Webhook Alerts',
+                authSubtitle: 'Access your personal portfolio & Discord price alerts',
+                tabLogin: 'Sign In',
+                tabRegister: 'Register',
+                usernameLabel: 'Username',
+                usernamePlaceholder: 'Your username',
+                regUsernamePlaceholder: 'At least 3 characters',
+                passwordLabel: 'Password',
+                regPasswordPlaceholder: 'At least 4 characters',
+                confirmPasswordLabel: 'Confirm Password',
+                regConfirmPlaceholder: 'Re-enter password',
+                rememberMe: 'Remember me',
+                loginSubmit: 'Sign In to Dashboard',
+                registerSubmit: 'Create Account & Start',
+                errInvalidUsername: 'Username must be 3-24 characters (letters, numbers, _, ., -).',
+                errPasswordMismatch: 'Passwords do not match.',
+                errUserExists: 'This username is already taken. Please sign in instead.',
+                errUserNotFound: 'User not found. Please create an account in the Register tab first.',
+                errWrongPassword: 'Incorrect password.',
+                soundOn: 'Sound On',
+                soundOff: 'Muted',
+                refreshLabel: 'Refresh:',
+                sec30: '30s',
+                min1: '1m',
+                min5: '5m',
+                manual: 'Manual',
+                manualOff: 'Off',
+                updatePricesBtn: 'Refresh Prices',
+                logoutBtn: 'Sign Out',
+                apiConnecting: 'Connecting...',
+                apiOnline: 'Online ({n} items)',
+                apiError: 'Connection Error',
+                lastUpdated: 'Last updated: {t}',
+                guideToggle: 'How to Use & Discord Webhook Guide',
+                guideTitle: 'Quick Start & Discord Webhook Setup',
+                guideStep1Title: 'Get Discord Webhook URL',
+                guideStep1Desc: 'In your Discord server, go to Edit Channel > Integrations > Webhooks > New Webhook, copy the Webhook URL, and paste it below.',
+                guideStep2Title: 'Add Investments & Shortcuts',
+                guideStep2Desc: 'Select Bazaar or Auction House and search for an item. You can type SkyBlock shortcuts like 12.5m, 450k, or 1.2b for Buy and Target prices.',
+                guideStep3Title: 'Auto Alerts & Simulation',
+                guideStep3Desc: 'When an item hits your target price, a rich embed with profit stats is sent to Discord. Click the flask icon on any card to test the alert instantly.',
+                statTotalInvested: 'TOTAL INVESTED',
+                statCurrentValue: 'CURRENT PORTFOLIO VALUE',
+                statNetPnl: 'NET PROFIT / LOSS',
+                statAlerts: 'ALERT STATUS',
+                statTargetReachedSub: 'Targets Hit',
+                webhookWaiting: 'Webhook pending',
+                webhookConnected: 'Discord Webhook Connected',
+                webhookTitle: 'Discord Webhook Notification Settings',
+                activeBadge: 'Active',
+                webhookSubtitle: 'Automatically sends a rich embed to your Discord channel when target prices are reached.',
+                saveBtn: 'Save',
+                testSendBtn: 'Send Test',
+                sendingBtn: 'Sending...',
+                addFormTitle: 'Add New Investment / Alert',
+                marketTypeLabel: 'Market Type',
+                itemNameLabel: 'Item Name or ID',
+                itemSearchPlaceholder: 'e.g. Booster Cookie, Recombobulator...',
+                liveItemsCount: '{n} live items',
+                offlineItemsCount: 'Manual / Offline',
+                selectedIdLabel: 'Selected ID:',
+                liveLabel: 'Live:',
+                quantityLabel: 'Quantity',
+                buyPriceLabel: 'Buy Price',
+                fillLiveBtn: 'Use Live',
+                buyPlaceholder: 'e.g. 11.5m',
+                targetPriceLabel: 'Target Price',
+                targetPlaceholder: 'e.g. 14m',
+                addSubmitBtn: 'Track & Set Alert',
+                presetsTitle: 'Popular Investment Shortcuts',
+                watchlistTitle: 'Tracked Investments',
+                filterAll: 'All',
+                filterReached: 'Target Hit',
+                emptyTitle: 'No investments tracked yet',
+                emptySubtitle: 'Add a Bazaar or Auction House item using the form on the left to start live price tracking and Discord alerts.',
+                cardSimulation: 'Simulation',
+                cardTargetReached: 'TARGET HIT!',
+                cardRealPrice: 'Live Price',
+                cardTestAlert: 'Test Alert',
+                cardBuyEach: 'Buy (Each)',
+                cardCurrentEach: 'Current (Each)',
+                cardTargetPrice: 'Target Price',
+                cardTotalPnl: 'Total Profit/Loss',
+                cardTargetProgress: 'Target Progress',
+                editModalTitle: 'Edit {name}',
+                cancelBtn: 'Cancel',
+                saveChangesBtn: 'Save Changes',
+                toastLogoutTitle: 'Signed Out',
+                toastLogoutMsg: 'You have safely signed out of your account.',
+                toastMarketUpdatedTitle: 'Market Updated',
+                toastMarketUpdatedMsg: 'Bazaar and Auction House prices refreshed.',
+                toastTargetHitTitle: 'Target Price Reached!',
+                toastTargetHitMsg: '<b>{name}</b> reached <b>{price}</b>!',
+                toastWebhookMissingTitle: 'Discord Webhook Missing',
+                toastWebhookMissingMsg: 'Target price hit, but no Discord Webhook URL is configured.',
+                toastDiscordSentTitle: 'Discord Alert Sent',
+                toastDiscordSentMsg: 'Notification for {name} delivered to your server.',
+                toastDiscordErrTitle: 'Discord Delivery Error',
+                toastDiscordErrMsg: 'Webhook URL may be invalid or rejected by Discord.',
+                toastWebhookClearedTitle: 'Webhook Cleared',
+                toastWebhookClearedMsg: 'Saved Discord Webhook URL removed.',
+                toastInvalidUrlTitle: 'Invalid URL',
+                toastInvalidUrlMsg: 'Please enter a valid Discord Webhook URL.',
+                toastWebhookSavedTitle: 'Webhook Saved',
+                toastWebhookSavedMsg: 'Discord notification channel linked to your account!',
+                toastWebhookRequiredTitle: 'Webhook URL Required',
+                toastWebhookRequiredMsg: 'Please paste your Discord Webhook URL first.',
+                toastTestSuccessTitle: 'Test Message Sent!',
+                toastTestSuccessMsg: 'Check your Discord channel to confirm delivery.',
+                toastNoItemTitle: 'No Item Selected',
+                toastNoItemMsg: 'Please select an item from the list first.',
+                toastEnterBuyTitle: 'Enter Buy Price',
+                toastEnterBuyMsg: 'Please enter a valid buy price first.',
+                toastInvalidFormTitle: 'Missing or Invalid Fields',
+                toastInvalidFormMsg: 'Please fill in all fields with valid values.',
+                toastAddedTitle: 'Investment Added',
+                toastAddedMsg: '<b>{name}</b> is now being tracked.',
+                toastSimOffTitle: 'Simulation Stopped',
+                toastSimOffMsg: '{name} reverted to live market price.',
+                toastAlertResetTitle: 'Alert Reset',
+                toastAlertResetMsg: '{name} will notify again when target price is reached.',
+                toastDeletedTitle: 'Removed',
+                toastDeletedMsg: 'Investment removed from your watchlist.',
+                toastUpdatedTitle: 'Updated',
+                toastUpdatedMsg: '{name} investment details saved.',
+                // Discord Embed Translations
+                discordBotName: 'SkyBlock Investment Bot',
+                discordAlertTitle: '{prefix}Target Price Hit: {name}',
+                discordAlertDesc: 'Your tracked **{market}** item has reached your target price!',
+                discordFieldAccount: 'Account',
+                discordFieldBuy: 'Buy Price (Each)',
+                discordFieldTarget: 'Target Price (Each)',
+                discordFieldCurrent: 'Current Price (Each)',
+                discordFieldQty: 'Quantity',
+                discordFieldProfit: 'Total Net Profit',
+                discordFooter: 'SkyBlock Investment Tracker • Live Market Alert',
+                discordTestTitle: 'Connected! SkyBlock Alert System Active',
+                discordTestDesc: 'This is a test notification. Whenever your tracked **Bazaar** or **Auction House** investments hit their target price, an alert will be posted here.',
+                discordTestStatus: 'Status',
+                discordTestStatusVal: 'Online & Monitoring',
+                discordTestCount: 'Tracked Items',
+                discordTestCountVal: '{n} Items'
+            }
+        };
+
+        let currentLang = localStorage.getItem('sb_tracker_lang') || 'tr';
+
+        function t(key, vars = {}) {
+            const dict = I18N[currentLang] || I18N.tr;
+            let str = dict[key] || I18N.tr[key] || key;
+            for (const [k, v] of Object.entries(vars)) {
+                str = str.replace(new RegExp(`\\{${k}\\}`, 'g'), v);
+            }
+            return str;
+        }
+
+        function setLanguage(lang) {
+            currentLang = lang === 'en' ? 'en' : 'tr';
+            localStorage.setItem('sb_tracker_lang', currentLang);
+            document.documentElement.lang = currentLang;
+            document.title = t('pageTitle');
+
+            // Update toggle buttons active state
+            document.querySelectorAll('[data-lang-btn]').forEach(btn => {
+                const isSelected = btn.getAttribute('data-lang-btn') === currentLang;
+                btn.className = isSelected
+                    ? 'px-2.5 py-1 rounded-lg bg-amber-500 text-gray-950 transition'
+                    : 'px-2.5 py-1 rounded-lg text-gray-400 hover:text-white transition';
+            });
+
+            // Apply static translations
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                el.textContent = t(key);
+            });
+
+            document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+                const key = el.getAttribute('data-i18n-placeholder');
+                el.placeholder = t(key);
+            });
+
+            // Update dynamic UI sections
+            updateSoundUI();
+            updateWebhookUI();
+            updateApiItemCountLabel();
+            updateApiStatusTexts();
+            if (refreshSeconds === 0) {
+                document.getElementById('countdown-badge').textContent = t('manualOff');
+            }
+            if (currentUser) {
+                renderInvestments();
+                updateSummaryStats();
+            }
+        }
+
+        // ==========================================
+        // AUTHENTICATION & USER-ISOLATED STORAGE
+        // ==========================================
+        const GLOBAL_KEYS = {
+            USERS: 'sb_global_users_v1',
+            SESSION: 'sb_global_session_v1'
+        };
+
+        let currentUser = null;
+
+        function getUserKey(suffix) {
+            return `sb_user_${currentUser}_${suffix}`;
+        }
+
+        async function hashPassword(password) {
+            if (window.crypto && crypto.subtle) {
+                const encoder = new TextEncoder();
+                const data = encoder.encode(password);
+                const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+                return Array.from(new Uint8Array(hashBuffer))
+                    .map(b => b.toString(16).padStart(2, '0'))
+                    .join('');
+            }
+            return btoa(unescape(encodeURIComponent(password)));
+        }
+
+        function getUsersRegistry() {
+            try {
+                return JSON.parse(localStorage.getItem(GLOBAL_KEYS.USERS) || '{}');
+            } catch (e) {
+                return {};
+            }
+        }
+
+        function saveUsersRegistry(users) {
+            localStorage.setItem(GLOBAL_KEYS.USERS, JSON.stringify(users));
+        }
+
+        function getSavedAuthSession() {
+            try {
+                const local = localStorage.getItem(GLOBAL_KEYS.SESSION);
+                if (local) return JSON.parse(local);
+                const sess = sessionStorage.getItem(GLOBAL_KEYS.SESSION);
+                if (sess) return JSON.parse(sess);
+            } catch (e) {}
+            return null;
+        }
+
+        function setAuthSession(username, remember) {
+            const payload = JSON.stringify({ username, loggedIn: true, ts: Date.now() });
+            localStorage.removeItem(GLOBAL_KEYS.SESSION);
+            sessionStorage.removeItem(GLOBAL_KEYS.SESSION);
+            if (remember) {
+                localStorage.setItem(GLOBAL_KEYS.SESSION, payload);
+            } else {
+                sessionStorage.setItem(GLOBAL_KEYS.SESSION, payload);
+            }
+        }
+
+        function switchAuthTab(tab) {
+            const loginTab = document.getElementById('auth-tab-login');
+            const regTab = document.getElementById('auth-tab-register');
+            const loginForm = document.getElementById('auth-login-form');
+            const regForm = document.getElementById('auth-register-form');
+
+            document.getElementById('login-error-box').classList.add('hidden');
+            document.getElementById('register-error-box').classList.add('hidden');
+
+            if (tab === 'login') {
+                loginTab.className = 'py-2 rounded-lg text-xs font-bold bg-amber-500 text-gray-950 shadow transition flex items-center justify-center gap-1.5';
+                regTab.className = 'py-2 rounded-lg text-xs font-bold text-gray-400 hover:text-white transition flex items-center justify-center gap-1.5';
+                loginForm.classList.remove('hidden');
+                regForm.classList.add('hidden');
+            } else {
+                regTab.className = 'py-2 rounded-lg text-xs font-bold bg-emerald-500 text-gray-950 shadow transition flex items-center justify-center gap-1.5';
+                loginTab.className = 'py-2 rounded-lg text-xs font-bold text-gray-400 hover:text-white transition flex items-center justify-center gap-1.5';
+                regForm.classList.remove('hidden');
+                loginForm.classList.add('hidden');
+            }
+        }
+
+        async function handleRegisterSubmit(e) {
+            e.preventDefault();
+            const errBox = document.getElementById('register-error-box');
+            errBox.classList.add('hidden');
+
+            const rawUsername = document.getElementById('reg-username').value.trim().toLowerCase();
+            const pass1 = document.getElementById('reg-password').value;
+            const pass2 = document.getElementById('reg-password-confirm').value;
+
+            if (!/^[a-z0-9_.-]{3,24}$/.test(rawUsername)) {
+                errBox.textContent = t('errInvalidUsername');
+                errBox.classList.remove('hidden');
+                return;
+            }
+            if (pass1 !== pass2) {
+                errBox.textContent = t('errPasswordMismatch');
+                errBox.classList.remove('hidden');
+                return;
+            }
+
+            const users = getUsersRegistry();
+            if (users[rawUsername]) {
+                errBox.textContent = t('errUserExists');
+                errBox.classList.remove('hidden');
+                return;
+            }
+
+            users[rawUsername] = {
+                passwordHash: await hashPassword(pass1),
+                createdAt: Date.now()
+            };
+            saveUsersRegistry(users);
+            setAuthSession(rawUsername, true);
+            await enterAppForUser(rawUsername, true);
+        }
+
+        async function handleLoginSubmit(e) {
+            e.preventDefault();
+            const errBox = document.getElementById('login-error-box');
+            errBox.classList.add('hidden');
+
+            const rawUsername = document.getElementById('login-username').value.trim().toLowerCase();
+            const pass = document.getElementById('login-password').value;
+            const remember = document.getElementById('login-remember').checked;
+
+            const users = getUsersRegistry();
+            const userRecord = users[rawUsername];
+            if (!userRecord) {
+                errBox.textContent = t('errUserNotFound');
+                errBox.classList.remove('hidden');
+                return;
+            }
+
+            const hashed = await hashPassword(pass);
+            if (hashed !== userRecord.passwordHash) {
+                errBox.textContent = t('errWrongPassword');
+                errBox.classList.remove('hidden');
+                return;
+            }
+
+            setAuthSession(rawUsername, remember);
+            await enterAppForUser(rawUsername, false);
+        }
+
+        function logoutUser() {
+            localStorage.removeItem(GLOBAL_KEYS.SESSION);
+            sessionStorage.removeItem(GLOBAL_KEYS.SESSION);
+            if (countdownTimer) clearInterval(countdownTimer);
+            currentUser = null;
+            investments = [];
+
+            document.getElementById('app-wrapper').classList.add('hidden');
+            document.getElementById('auth-overlay').classList.remove('hidden');
+            document.getElementById('login-password').value = '';
+            showToast(t('toastLogoutTitle'), t('toastLogoutMsg'), 'info');
+        }
+
+        async function enterAppForUser(username, isNewAccount = false) {
+            currentUser = username;
+            document.getElementById('header-username-badge').textContent = username;
+            document.getElementById('auth-overlay').classList.add('hidden');
+            document.getElementById('app-wrapper').classList.remove('hidden');
+
+            loadInitialData(isNewAccount);
+            renderInvestments();
+            updateSummaryStats();
+            startCountdownTimer();
+            await fetchAllMarketData(false);
+        }
+
+        // ==========================================
+        // STATE & CONFIGURATION
+        // ==========================================
+        let investments = [];
+        let bazaarPrices = {};
+        let ahPrices = {};
+        let bazaarItemsList = [];
+        let ahItemsList = [];
+        let bazaarApiState = 'connecting';
+        let ahApiState = 'connecting';
+        let lastUpdatedDate = null;
+
+        let currentMarketType = 'BAZAAR';
+        let currentFilter = 'ALL';
+        let selectedItemId = '';
+        let soundEnabled = true;
+        let refreshSeconds = 60;
+        let countdown = 60;
+        let countdownTimer = null;
+
+        // ==========================================
+        // UTILITY FUNCTIONS
+        // ==========================================
+        function parseCoinInput(val) {
+            if (typeof val === 'number') return val;
+            if (!val) return NaN;
+            let str = val.toString().trim().toLowerCase().replace(/,/g, '');
+            let multiplier = 1;
+            if (str.endsWith('k')) {
+                multiplier = 1e3;
+                str = str.slice(0, -1);
+            } else if (str.endsWith('m')) {
+                multiplier = 1e6;
+                str = str.slice(0, -1);
+            } else if (str.endsWith('b')) {
+                multiplier = 1e9;
+                str = str.slice(0, -1);
+            }
+            const num = parseFloat(str);
+            return isNaN(num) ? NaN : num * multiplier;
+        }
+
+        function formatCoinsShort(num) {
+            if (num === null || num === undefined || isNaN(num)) return '-';
+            const abs = Math.abs(num);
+            const sign = num < 0 ? '-' : '';
+            if (abs >= 1e9) return sign + (abs / 1e9).toFixed(2) + 'B';
+            if (abs >= 1e6) return sign + (abs / 1e6).toFixed(2) + 'M';
+            if (abs >= 1e3) return sign + (abs / 1e3).toFixed(1) + 'K';
+            return sign + Math.round(abs).toLocaleString('en-US');
+        }
+
+        function formatCoinsExact(num) {
+            if (num === null || num === undefined || isNaN(num)) return '-';
+            return Math.round(num).toLocaleString('en-US') + ' Coins';
+        }
+
+        function formatItemIdToName(id) {
+            if (!id) return '';
+            let cleanId = id;
+            let suffix = '';
+            if (id.includes(';')) {
+                const parts = id.split(';');
+                cleanId = parts[0];
+                const tierMap = { '0': 'Common', '1': 'Uncommon', '2': 'Rare', '3': 'Epic', '4': 'Legendary', '5': 'Mythic' };
+                suffix = tierMap[parts[1]] ? ` (${tierMap[parts[1]]})` : ` (Tier ${parts[1]})`;
+            }
+            return cleanId
+                .split('_')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                .join(' ') + suffix;
+        }
+
+        // ==========================================
+        // SOUND & TOAST NOTIFICATIONS
+        // ==========================================
+        function playAlertChime() {
+            if (!soundEnabled) return;
+            try {
+                if (typeof Tone !== 'undefined') {
+                    if (Tone.context.state !== 'running') {
+                        Tone.start();
+                    }
+                    const synth = new Tone.PolySynth(Tone.Synth).toDestination();
+                    synth.volume.value = -8;
+                    const now = Tone.now();
+                    synth.triggerAttackRelease("C5", "16n", now);
+                    synth.triggerAttackRelease("E5", "16n", now + 0.1);
+                    synth.triggerAttackRelease("G5", "16n", now + 0.2);
+                    synth.triggerAttackRelease("C6", "8n", now + 0.3);
+                }
+            } catch (e) {}
+        }
+
+        function showToast(title, message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+
+            const styles = {
+                success: 'bg-gray-900 border-emerald-500/70 text-emerald-300',
+                error: 'bg-gray-900 border-rose-500/70 text-rose-300',
+                warning: 'bg-gray-900 border-amber-500/70 text-amber-300',
+                discord: 'bg-gray-900 border-[#5865F2] text-indigo-200',
+                info: 'bg-gray-900 border-gray-700 text-gray-200'
+            };
+
+            const icons = {
+                success: 'check-circle-2 text-emerald-400',
+                error: 'alert-circle text-rose-400',
+                warning: 'alert-triangle text-amber-400',
+                discord: 'webhook text-[#5865F2]',
+                info: 'info text-amber-400'
+            };
+
+            toast.className = `pointer-events-auto border rounded-2xl p-4 shadow-2xl flex items-start gap-3 transition-all duration-300 transform translate-y-2 opacity-0 ${styles[type] || styles.info}`;
+            toast.innerHTML = `
+                <i data-lucide="${icons[type] || icons.info}" class="w-5 h-5 mt-0.5 shrink-0"></i>
+                <div class="flex-1 min-w-0">
+                    <div class="font-bold text-sm text-white">${title}</div>
+                    <div class="text-xs text-gray-300 mt-0.5 leading-relaxed">${message}</div>
+                </div>
+                <button onclick="this.parentElement.remove()" class="text-gray-500 hover:text-white text-xs">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            `;
+
+            container.appendChild(toast);
+            if (window.lucide) lucide.createIcons();
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            });
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 5000);
+        }
+
+        // ==========================================
+        // HYPIXEL & MOULBERRY API FETCHING
+        // ==========================================
+        function updateApiStatusTexts() {
+            const bzDot = document.getElementById('bazaar-status-dot');
+            const bzText = document.getElementById('bazaar-status-text');
+            if (bazaarApiState === 'online') {
+                bzDot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400';
+                bzText.textContent = t('apiOnline', { n: bazaarItemsList.length });
+                bzText.className = 'font-semibold text-emerald-400';
+            } else if (bazaarApiState === 'error') {
+                bzDot.className = 'w-2.5 h-2.5 rounded-full bg-rose-500';
+                bzText.textContent = t('apiError');
+                bzText.className = 'font-semibold text-rose-400';
+            } else {
+                bzText.textContent = t('apiConnecting');
+            }
+
+            const ahDot = document.getElementById('ah-status-dot');
+            const ahText = document.getElementById('ah-status-text');
+            if (ahApiState === 'online') {
+                ahDot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400';
+                ahText.textContent = t('apiOnline', { n: ahItemsList.length });
+                ahText.className = 'font-semibold text-emerald-400';
+            } else if (ahApiState === 'error') {
+                ahDot.className = 'w-2.5 h-2.5 rounded-full bg-rose-500';
+                ahText.textContent = t('apiError');
+                ahText.className = 'font-semibold text-rose-400';
+            } else {
+                ahText.textContent = t('apiConnecting');
+            }
+
+            if (lastUpdatedDate) {
+                const locale = currentLang === 'tr' ? 'tr-TR' : 'en-US';
+                document.getElementById('last-updated-text').textContent =
+                    t('lastUpdated', { t: lastUpdatedDate.toLocaleTimeString(locale) });
+            }
+        }
+
+        async function fetchBazaarData() {
+            try {
+                const res = await fetch('https://api.hypixel.net/v2/skyblock/bazaar');
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const data = await res.json();
+                if (!data.success || !data.products) throw new Error('Invalid Bazaar payload');
+
+                const newPrices = {};
+                const list = [];
+
+                for (const [id, prod] of Object.entries(data.products)) {
+                    const sellPrice = prod.quick_status?.sellPrice || 0;
+                    const buyPrice = prod.quick_status?.buyPrice || 0;
+                    const displayPrice = sellPrice > 0 ? sellPrice : buyPrice;
+                    const displayName = formatItemIdToName(id);
+
+                    newPrices[id] = { sellPrice, buyPrice, price: displayPrice, name: displayName };
+                    list.push({ id, name: displayName, price: displayPrice });
+                }
+
+                bazaarPrices = newPrices;
+                bazaarItemsList = list.sort((a, b) => a.name.localeCompare(b.name));
+                bazaarApiState = 'online';
+                updateApiStatusTexts();
+                return true;
+            } catch (err) {
+                bazaarApiState = 'error';
+                updateApiStatusTexts();
+                return false;
+            }
+        }
+
+        async function fetchAHData() {
+            try {
+                const res = await fetch('https://moulberry.codes/lowestbin.json');
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const data = await res.json();
+
+                const newPrices = {};
+                const list = [];
+
+                for (const [id, price] of Object.entries(data)) {
+                    if (typeof price === 'number' && price > 0) {
+                        newPrices[id] = price;
+                        list.push({ id, name: formatItemIdToName(id), price });
+                    }
+                }
+
+                ahPrices = newPrices;
+                ahItemsList = list.sort((a, b) => a.name.localeCompare(b.name));
+                ahApiState = 'online';
+                updateApiStatusTexts();
+                return true;
+            } catch (err) {
+                ahApiState = 'error';
+                updateApiStatusTexts();
+                return false;
+            }
+        }
+
+        async function fetchAllMarketData(isManual = false) {
+            const spinner = document.getElementById('refresh-spinner');
+            if (spinner) spinner.classList.add('animate-spin');
+
+            await Promise.all([fetchBazaarData(), fetchAHData()]);
+
+            updateApiItemCountLabel();
+            await updateInvestmentLivePrices();
+            renderInvestments();
+            updateSummaryStats();
+
+            lastUpdatedDate = new Date();
+            updateApiStatusTexts();
+
+            if (spinner) spinner.classList.remove('animate-spin');
+            countdown = refreshSeconds;
+
+            if (isManual) {
+                showToast(t('toastMarketUpdatedTitle'), t('toastMarketUpdatedMsg'), 'info');
+            }
+        }
+
+        // ==========================================
+        // LIVE PRICE MATCHING & DISCORD WEBHOOK ALERTS
+        // ==========================================
+        function getLivePriceForInvestment(inv) {
+            if (inv.simulatedPrice !== null && inv.simulatedPrice !== undefined) {
+                return inv.simulatedPrice;
+            }
+            if (inv.marketType === 'BAZAAR') {
+                const entry = bazaarPrices[inv.itemId];
+                return entry ? entry.price : inv.currentPrice;
+            } else {
+                const price = ahPrices[inv.itemId];
+                return price !== undefined ? price : inv.currentPrice;
+            }
+        }
+
+        async function updateInvestmentLivePrices() {
+            let anyTriggered = false;
+
+            for (const inv of investments) {
+                const livePrice = getLivePriceForInvestment(inv);
+                if (livePrice !== null && livePrice !== undefined && !isNaN(livePrice)) {
+                    inv.currentPrice = livePrice;
+                }
+
+                if (inv.currentPrice !== null && inv.currentPrice >= inv.targetPrice) {
+                    if (!inv.alertSent) {
+                        inv.alertSent = true;
+                        anyTriggered = true;
+                        await triggerDiscordAlert(inv, false);
+                    }
+                }
+            }
+
+            if (anyTriggered) {
+                playAlertChime();
+            }
+            saveInvestmentsToStorage();
+        }
+
+        async function triggerDiscordAlert(inv, isSimulation = false) {
+            const webhookUrl = localStorage.getItem(getUserKey('webhook')) || '';
+            const totalBuy = inv.buyPrice * inv.quantity;
+            const totalCurrent = inv.currentPrice * inv.quantity;
+            const profit = totalCurrent - totalBuy;
+            const profitPct = totalBuy > 0 ? ((profit / totalBuy) * 100).toFixed(2) : '0.00';
+
+            showToast(
+                t('toastTargetHitTitle'),
+                t('toastTargetHitMsg', { name: inv.itemName, price: formatCoinsShort(inv.currentPrice) }),
+                'success'
+            );
+
+            if (!webhookUrl) {
+                showToast(t('toastWebhookMissingTitle'), t('toastWebhookMissingMsg'), 'warning');
+                return;
+            }
+
+            const marketLabel = inv.marketType === 'BAZAAR' ? 'Bazaar' : 'Auction House (Lowest BIN)';
+            const prefix = isSimulation ? '🧪 [TEST] ' : '🚀 ';
+
+            const payload = {
+                username: t('discordBotName'),
+                embeds: [
+                    {
+                        title: t('discordAlertTitle', { prefix, name: inv.itemName }),
+                        description: t('discordAlertDesc', { market: marketLabel }),
+                        color: 5763719,
+                        fields: [
+                            { name: `👤 ${t('discordFieldAccount')}`, value: `\`${currentUser}\``, inline: true },
+                            { name: `💰 ${t('discordFieldBuy')}`, value: `\`${formatCoinsExact(inv.buyPrice)}\` (${formatCoinsShort(inv.buyPrice)})`, inline: true },
+                            { name: `🎯 ${t('discordFieldTarget')}`, value: `\`${formatCoinsExact(inv.targetPrice)}\` (${formatCoinsShort(inv.targetPrice)})`, inline: true },
+                            { name: `📈 ${t('discordFieldCurrent')}`, value: `**\`${formatCoinsExact(inv.currentPrice)}\`** (${formatCoinsShort(inv.currentPrice)})`, inline: true },
+                            { name: `📦 ${t('discordFieldQty')}`, value: `\`${inv.quantity}x\``, inline: true },
+                            { name: `💎 ${t('discordFieldProfit')}`, value: `**+${formatCoinsExact(profit)}** (+${profitPct}%)`, inline: true }
+                        ],
+                        footer: { text: t('discordFooter') },
+                        timestamp: new Date().toISOString()
+                    }
+                ]
+            };
+
+            try {
+                const response = await fetch(webhookUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    showToast(t('toastDiscordSentTitle'), t('toastDiscordSentMsg', { name: inv.itemName }), 'discord');
+                } else {
+                    throw new Error(`Discord HTTP ${response.status}`);
+                }
+            } catch (err) {
+                showToast(t('toastDiscordErrTitle'), t('toastDiscordErrMsg'), 'error');
+            }
+        }
+
+        // ==========================================
+        // WEBHOOK SETTINGS HANDLERS
+        // ==========================================
+        function saveWebhookUrl() {
+            const url = document.getElementById('webhook-url-input').value.trim();
+            if (!url) {
+                localStorage.removeItem(getUserKey('webhook'));
+                updateWebhookUI();
+                showToast(t('toastWebhookClearedTitle'), t('toastWebhookClearedMsg'), 'info');
+                return;
+            }
+            if (!url.startsWith('https://discord.com/api/webhooks/') && !url.startsWith('https://discordapp.com/api/webhooks/')) {
+                showToast(t('toastInvalidUrlTitle'), t('toastInvalidUrlMsg'), 'error');
+                return;
+            }
+            localStorage.setItem(getUserKey('webhook'), url);
+            updateWebhookUI();
+            showToast(t('toastWebhookSavedTitle'), t('toastWebhookSavedMsg'), 'discord');
+        }
+
+        async function sendTestWebhook() {
+            const inputUrl = document.getElementById('webhook-url-input').value.trim();
+            const url = inputUrl || localStorage.getItem(getUserKey('webhook'));
+
+            if (!url) {
+                showToast(t('toastWebhookRequiredTitle'), t('toastWebhookRequiredMsg'), 'warning');
+                return;
+            }
+
+            if (inputUrl) {
+                localStorage.setItem(getUserKey('webhook'), inputUrl);
+                updateWebhookUI();
+            }
+
+            const btn = document.getElementById('test-webhook-btn');
+            btn.disabled = true;
+            btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>${t('sendingBtn')}</span>`;
+            if (window.lucide) lucide.createIcons();
+
+            const testPayload = {
+                username: t('discordBotName'),
+                embeds: [
+                    {
+                        title: `✅ ${t('discordTestTitle')}`,
+                        description: t('discordTestDesc'),
+                        color: 5793266,
+                        fields: [
+                            { name: t('discordFieldAccount'), value: `\`${currentUser}\``, inline: true },
+                            { name: t('discordTestStatus'), value: `\`${t('discordTestStatusVal')}\``, inline: true },
+                            { name: t('discordTestCount'), value: `\`${t('discordTestCountVal', { n: investments.length })}\``, inline: true }
+                        ],
+                        timestamp: new Date().toISOString()
+                    }
+                ]
+            };
+
+            try {
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(testPayload)
+                });
+
+                if (res.ok) {
+                    playAlertChime();
+                    showToast(t('toastTestSuccessTitle'), t('toastTestSuccessMsg'), 'discord');
+                } else {
+                    showToast(t('toastDiscordErrTitle'), t('toastDiscordErrMsg'), 'error');
+                }
+            } catch (e) {
+                showToast(t('toastDiscordErrTitle'), t('toastDiscordErrMsg'), 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<i data-lucide="send" class="w-4 h-4 text-[#5865F2]"></i><span>${t('testSendBtn')}</span>`;
+                if (window.lucide) lucide.createIcons();
+            }
+        }
+
+        function updateWebhookUI() {
+            const url = currentUser ? (localStorage.getItem(getUserKey('webhook')) || '') : '';
+            document.getElementById('webhook-url-input').value = url;
+            const pill = document.getElementById('webhook-connected-pill');
+            const badge = document.getElementById('stat-webhook-badge');
+
+            if (url) {
+                pill.classList.remove('hidden');
+                badge.innerHTML = `<i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-emerald-400"></i><span class="text-emerald-400 font-semibold">${t('webhookConnected')}</span>`;
+            } else {
+                pill.classList.add('hidden');
+                badge.innerHTML = `<i data-lucide="radio" class="w-3.5 h-3.5 text-amber-400"></i><span class="text-amber-400/90">${t('webhookWaiting')}</span>`;
+            }
+            if (window.lucide) lucide.createIcons();
+        }
+
+        function toggleWebhookVisibility() {
+            const input = document.getElementById('webhook-url-input');
+            const icon = document.getElementById('webhook-eye-icon');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.setAttribute('data-lucide', 'eye-off');
+            } else {
+                input.type = 'password';
+                icon.setAttribute('data-lucide', 'eye');
+            }
+            if (window.lucide) lucide.createIcons();
+        }
+
+        // ==========================================
+        // FORM & AUTOCOMPLETE LOGIC
+        // ==========================================
+        function setMarketType(type) {
+            currentMarketType = type;
+            document.getElementById('market-type-input').value = type;
+
+            const bzBtn = document.getElementById('type-bazaar-btn');
+            const ahBtn = document.getElementById('type-ah-btn');
+
+            if (type === 'BAZAAR') {
+                bzBtn.className = 'py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 bg-amber-500 text-gray-950 shadow';
+                ahBtn.className = 'py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 text-gray-400 hover:text-white';
+            } else {
+                ahBtn.className = 'py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 bg-amber-500 text-gray-950 shadow';
+                bzBtn.className = 'py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 text-gray-400 hover:text-white';
+            }
+
+            selectedItemId = '';
+            document.getElementById('selected-item-preview').classList.add('hidden');
+            updateApiItemCountLabel();
+            handleItemSearchInput(document.getElementById('item-search-input').value);
+        }
+
+        function updateApiItemCountLabel() {
+            const count = currentMarketType === 'BAZAAR' ? bazaarItemsList.length : ahItemsList.length;
+            document.getElementById('api-item-count').textContent = count > 0
+                ? t('liveItemsCount', { n: count })
+                : t('offlineItemsCount');
+        }
+
+        function handleItemSearchInput(query) {
+            const dropdown = document.getElementById('autocomplete-dropdown');
+            const cleanQuery = query.trim().toLowerCase();
+
+            if (!cleanQuery) {
+                dropdown.classList.add('hidden');
+                return;
+            }
+
+            const sourceList = currentMarketType === 'BAZAAR' ? bazaarItemsList : ahItemsList;
+            const matches = sourceList
+                .filter(item => item.name.toLowerCase().includes(cleanQuery) || item.id.toLowerCase().includes(cleanQuery))
+                .slice(0, 15);
+
+            if (matches.length === 0) {
+                dropdown.classList.add('hidden');
+                return;
+            }
+
+            dropdown.innerHTML = matches.map(item => `
+                <button type="button" onclick="selectAutocompleteItem('${item.id}', '${item.name.replace(/'/g, "\\'")}', ${item.price})"
+                    class="w-full px-3.5 py-2.5 text-left hover:bg-gray-900 flex items-center justify-between transition group">
+                    <div>
+                        <div class="text-xs font-bold text-gray-200 group-hover:text-amber-400 transition">${item.name}</div>
+                        <div class="text-[10px] font-mono text-gray-500">${item.id}</div>
+                    </div>
+                    <div class="text-xs font-mono font-bold text-emerald-400">${formatCoinsShort(item.price)}</div>
+                </button>
+            `).join('');
+
+            dropdown.classList.remove('hidden');
+        }
+
+        function selectAutocompleteItem(id, name, price) {
+            selectedItemId = id;
+            document.getElementById('item-search-input').value = name;
+            document.getElementById('autocomplete-dropdown').classList.add('hidden');
+
+            const preview = document.getElementById('selected-item-preview');
+            document.getElementById('preview-item-id').textContent = id;
+            document.getElementById('preview-item-price').textContent = formatCoinsShort(price);
+            preview.classList.remove('hidden');
+
+            const buyInput = document.getElementById('buy-price-input');
+            if (!buyInput.value && price > 0) {
+                buyInput.value = Math.round(price);
+                updatePriceHelper('buy');
+            }
+        }
+
+        function quickFillPreset(market, id, name) {
+            setMarketType(market);
+            const livePrice = market === 'BAZAAR' ? bazaarPrices[id]?.price : ahPrices[id];
+            selectAutocompleteItem(id, name, livePrice || 0);
+            if (livePrice) {
+                document.getElementById('buy-price-input').value = Math.round(livePrice);
+                document.getElementById('target-price-input').value = Math.round(livePrice * 1.15);
+                updatePriceHelper('buy');
+                updatePriceHelper('target');
+            }
+        }
+
+        function fillCurrentPriceToBuy() {
+            if (!selectedItemId) {
+                showToast(t('toastNoItemTitle'), t('toastNoItemMsg'), 'warning');
+                return;
+            }
+            const price = currentMarketType === 'BAZAAR' ? bazaarPrices[selectedItemId]?.price : ahPrices[selectedItemId];
+            if (price) {
+                document.getElementById('buy-price-input').value = Math.round(price);
+                updatePriceHelper('buy');
+            }
+        }
+
+        function applyTargetMultiplier(mult) {
+            const buyVal = parseCoinInput(document.getElementById('buy-price-input').value);
+            if (isNaN(buyVal) || buyVal <= 0) {
+                showToast(t('toastEnterBuyTitle'), t('toastEnterBuyMsg'), 'warning');
+                return;
+            }
+            document.getElementById('target-price-input').value = Math.round(buyVal * mult);
+            updatePriceHelper('target');
+        }
+
+        function updatePriceHelper(field) {
+            const input = document.getElementById(field === 'buy' ? 'buy-price-input' : 'target-price-input');
+            const helper = document.getElementById(field === 'buy' ? 'buy-price-helper' : 'target-price-helper');
+            const parsed = parseCoinInput(input.value);
+            helper.textContent = !isNaN(parsed) && parsed > 0 ? `= ${formatCoinsExact(parsed)}` : '';
+        }
+
+        document.addEventListener('click', (e) => {
+            const dropdown = document.getElementById('autocomplete-dropdown');
+            const input = document.getElementById('item-search-input');
+            if (dropdown && !dropdown.contains(e.target) && e.target !== input) {
+                dropdown.classList.add('hidden');
+            }
+        });
+
+        async function handleAddInvestment(e) {
+            e.preventDefault();
+
+            const rawName = document.getElementById('item-search-input').value.trim();
+            const quantity = parseInt(document.getElementById('quantity-input').value, 10);
+            const buyPrice = parseCoinInput(document.getElementById('buy-price-input').value);
+            const targetPrice = parseCoinInput(document.getElementById('target-price-input').value);
+
+            if (!rawName || isNaN(quantity) || quantity <= 0 || isNaN(buyPrice) || buyPrice <= 0 || isNaN(targetPrice) || targetPrice <= 0) {
+                showToast(t('toastInvalidFormTitle'), t('toastInvalidFormMsg'), 'error');
+                return;
+            }
+
+            let itemId = selectedItemId;
+            if (!itemId) {
+                const sourceList = currentMarketType === 'BAZAAR' ? bazaarItemsList : ahItemsList;
+                const found = sourceList.find(i => i.name.toLowerCase() === rawName.toLowerCase() || i.id.toLowerCase() === rawName.toLowerCase());
+                itemId = found ? found.id : rawName.toUpperCase().replace(/\s+/g, '_');
+            }
+
+            const initialLivePrice = currentMarketType === 'BAZAAR'
+                ? (bazaarPrices[itemId]?.price ?? buyPrice)
+                : (ahPrices[itemId] ?? buyPrice);
+
+            const newInvestment = {
+                uid: 'inv_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                marketType: currentMarketType,
+                itemId: itemId,
+                itemName: rawName,
+                quantity: quantity,
+                buyPrice: buyPrice,
+                targetPrice: targetPrice,
+                currentPrice: initialLivePrice,
+                simulatedPrice: null,
+                alertSent: false,
+                createdAt: Date.now()
+            };
+
+            investments.unshift(newInvestment);
+            saveInvestmentsToStorage();
+
+            document.getElementById('add-investment-form').reset();
+            document.getElementById('quantity-input').value = 1;
+            document.getElementById('selected-item-preview').classList.add('hidden');
+            document.getElementById('buy-price-helper').textContent = '';
+            document.getElementById('target-price-helper').textContent = '';
+            selectedItemId = '';
+
+            await updateInvestmentLivePrices();
+            renderInvestments();
+            updateSummaryStats();
+
+            showToast(t('toastAddedTitle'), t('toastAddedMsg', { name: newInvestment.itemName }), 'success');
+        }
+
+        // ==========================================
+        // PORTFOLIO RENDERING & CARD ACTIONS
+        // ==========================================
+        function setFilter(filter) {
+            currentFilter = filter;
+            ['ALL', 'BAZAAR', 'AH', 'REACHED'].forEach(f => {
+                const btn = document.getElementById(`filter-${f}`);
+                if (f === filter) {
+                    btn.className = 'px-3 py-1 rounded-lg font-semibold bg-gray-800 text-white transition';
+                } else {
+                    btn.className = 'px-3 py-1 rounded-lg font-semibold text-gray-400 hover:text-white transition';
+                }
+            });
+            renderInvestments();
+        }
+
+        function renderInvestments() {
+            const container = document.getElementById('investments-list');
+            const emptyState = document.getElementById('empty-state');
+            document.getElementById('watchlist-count-badge').textContent = investments.length;
+
+            let filtered = investments;
+            if (currentFilter === 'BAZAAR') filtered = investments.filter(i => i.marketType === 'BAZAAR');
+            if (currentFilter === 'AH') filtered = investments.filter(i => i.marketType === 'AH');
+            if (currentFilter === 'REACHED') filtered = investments.filter(i => i.currentPrice >= i.targetPrice);
+
+            if (filtered.length === 0) {
+                container.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+
+            container.innerHTML = filtered.map(inv => {
+                const totalBuy = inv.buyPrice * inv.quantity;
+                const totalCurrent = inv.currentPrice * inv.quantity;
+                const pnl = totalCurrent - totalBuy;
+                const pnlPct = totalBuy > 0 ? ((pnl / totalBuy) * 100) : 0;
+                const isProfit = pnl >= 0;
+                const isTargetReached = inv.currentPrice >= inv.targetPrice;
+
+                let progress = 0;
+                if (inv.targetPrice > inv.buyPrice) {
+                    progress = ((inv.currentPrice - inv.buyPrice) / (inv.targetPrice - inv.buyPrice)) * 100;
+                } else if (inv.currentPrice >= inv.targetPrice) {
+                    progress = 100;
+                }
+                progress = Math.max(0, Math.min(100, progress));
+
+                const marketBadge = inv.marketType === 'BAZAAR'
+                    ? `<span class="px-2 py-0.5 text-[10px] font-bold uppercase rounded bg-amber-500/15 text-amber-400 border border-amber-500/30">Bazaar</span>`
+                    : `<span class="px-2 py-0.5 text-[10px] font-bold uppercase rounded bg-purple-500/15 text-purple-400 border border-purple-500/30">AH Lowest BIN</span>`;
+
+                const simBadge = inv.simulatedPrice !== null
+                    ? `<span class="px-2 py-0.5 text-[10px] font-bold uppercase rounded bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/40 inline-flex items-center gap-1"><i data-lucide="flask-conical" class="w-3 h-3"></i>${t('cardSimulation')}</span>`
+                    : '';
+
+                const mainIcon = isTargetReached ? 'rocket' : (inv.marketType === 'BAZAAR' ? 'package' : 'gavel');
+
+                return `
+                <div class="bg-gray-900/95 border ${isTargetReached ? 'border-emerald-500 target-reached-card' : 'border-gray-800 hover:border-gray-700'} rounded-2xl p-4 sm:p-5 transition shadow-lg">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3.5 border-b border-gray-800/80">
+                        <div class="flex items-start sm:items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl ${isTargetReached ? 'bg-emerald-500/20 text-emerald-400' : 'bg-gray-800 text-amber-400'} flex items-center justify-center shrink-0">
+                                <i data-lucide="${mainIcon}" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <h3 class="text-base font-extrabold text-white">${inv.itemName}</h3>
+                                    <span class="px-2 py-0.5 text-xs font-mono font-bold rounded bg-gray-800 text-gray-300">${inv.quantity}x</span>
+                                    ${marketBadge}
+                                    ${simBadge}
+                                    ${isTargetReached ? `<span class="px-2 py-0.5 text-[10px] font-extrabold uppercase rounded-full bg-emerald-500 text-gray-950 animate-pulse">${t('cardTargetReached')}</span>` : ''}
+                                </div>
+                                <div class="text-[11px] font-mono text-gray-500 mt-0.5">ID: ${inv.itemId}</div>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="flex items-center gap-1.5 self-end sm:self-center">
+                            <button onclick="toggleSimulateTarget('${inv.uid}')"
+                                class="px-2.5 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 ${inv.simulatedPrice !== null ? 'bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/40' : 'bg-gray-800 hover:bg-gray-700 text-gray-300'}">
+                                <i data-lucide="flask-conical" class="w-3.5 h-3.5 text-purple-400"></i>
+                                <span class="hidden md:inline">${inv.simulatedPrice !== null ? t('cardRealPrice') : t('cardTestAlert')}</span>
+                            </button>
+
+                            ${inv.alertSent ? `
+                            <button onclick="resetAlertStatus('${inv.uid}')" class="p-2 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 text-xs transition">
+                                <i data-lucide="bell-off" class="w-3.5 h-3.5"></i>
+                            </button>` : ''}
+
+                            <button onclick="openEditModal('${inv.uid}')" class="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs transition">
+                                <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                            </button>
+
+                            <button onclick="deleteInvestment('${inv.uid}')" class="p-2 rounded-lg bg-gray-800 hover:bg-rose-500/20 text-gray-400 hover:text-rose-400 text-xs transition">
+                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Price Metrics Grid -->
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3.5 text-xs">
+                        <div class="bg-gray-950/60 p-2.5 rounded-xl border border-gray-800/80">
+                            <div class="text-gray-500 mb-0.5">${t('cardBuyEach')}</div>
+                            <div class="font-mono font-bold text-gray-200 text-sm">${formatCoinsShort(inv.buyPrice)}</div>
+                            <div class="font-mono text-[10px] text-gray-500">${formatCoinsExact(inv.buyPrice)}</div>
+                        </div>
+
+                        <div class="bg-gray-950/60 p-2.5 rounded-xl border border-gray-800/80">
+                            <div class="text-gray-500 mb-0.5">${t('cardCurrentEach')}</div>
+                            <div class="font-mono font-bold text-amber-400 text-sm">${formatCoinsShort(inv.currentPrice)}</div>
+                            <div class="font-mono text-[10px] text-gray-500">${formatCoinsExact(inv.currentPrice)}</div>
+                        </div>
+
+                        <div class="bg-gray-950/60 p-2.5 rounded-xl border border-gray-800/80">
+                            <div class="text-gray-500 mb-0.5">${t('cardTargetPrice')}</div>
+                            <div class="font-mono font-bold text-emerald-400 text-sm">${formatCoinsShort(inv.targetPrice)}</div>
+                            <div class="font-mono text-[10px] text-gray-500">${formatCoinsExact(inv.targetPrice)}</div>
+                        </div>
+
+                        <div class="bg-gray-950/60 p-2.5 rounded-xl border ${isProfit ? 'border-emerald-500/20' : 'border-rose-500/20'}">
+                            <div class="text-gray-500 mb-0.5">${t('cardTotalPnl')}</div>
+                            <div class="font-mono font-extrabold text-sm ${isProfit ? 'text-emerald-400' : 'text-rose-400'}">
+                                ${isProfit ? '+' : ''}${formatCoinsShort(pnl)}
+                            </div>
+                            <div class="font-mono text-[10px] font-bold ${isProfit ? 'text-emerald-500' : 'text-rose-500'}">
+                                ${isProfit ? '+' : ''}${pnlPct.toFixed(1)}%
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Target Progress Bar -->
+                    <div class="mt-3.5">
+                        <div class="flex items-center justify-between text-[11px] mb-1">
+                            <span class="text-gray-400">${t('cardTargetProgress')}</span>
+                            <span class="font-mono font-bold ${isTargetReached ? 'text-emerald-400' : 'text-amber-400'}">${progress.toFixed(0)}%</span>
+                        </div>
+                        <div class="w-full h-2 bg-gray-950 rounded-full overflow-hidden border border-gray-800">
+                            <div class="h-full transition-all duration-500 rounded-full ${isTargetReached ? 'bg-emerald-500' : 'bg-gradient-to-r from-amber-500 to-emerald-400'}" style="width: ${progress}%"></div>
+                        </div>
+                    </div>
+                </div>
+                `;
+            }).join('');
+
+            if (window.lucide) lucide.createIcons();
+        }
+
+        function updateSummaryStats() {
+            let totalInvested = 0;
+            let currentValue = 0;
+            let triggeredCount = 0;
+
+            for (const inv of investments) {
+                totalInvested += inv.buyPrice * inv.quantity;
+                currentValue += inv.currentPrice * inv.quantity;
+                if (inv.currentPrice >= inv.targetPrice) {
+                    triggeredCount++;
+                }
+            }
+
+            const netPnl = currentValue - totalInvested;
+            const pnlPercent = totalInvested > 0 ? ((netPnl / totalInvested) * 100) : 0;
+            const isPositive = netPnl >= 0;
+
+            document.getElementById('stat-total-invested').textContent = `${formatCoinsShort(totalInvested)} Coins`;
+            document.getElementById('stat-total-invested-exact').textContent = formatCoinsExact(totalInvested);
+
+            document.getElementById('stat-current-value').textContent = `${formatCoinsShort(currentValue)} Coins`;
+            document.getElementById('stat-current-value-exact').textContent = formatCoinsExact(currentValue);
+
+            const pnlEl = document.getElementById('stat-net-pnl');
+            const pnlPctEl = document.getElementById('stat-pnl-percent');
+            const pnlIconBg = document.getElementById('stat-pnl-icon-bg');
+            const pnlIcon = document.getElementById('stat-pnl-icon');
+
+            pnlEl.textContent = `${isPositive ? '+' : ''}${formatCoinsShort(netPnl)} Coins`;
+            pnlEl.className = `text-2xl font-extrabold font-mono tracking-tight ${isPositive ? 'text-emerald-400' : 'text-rose-400'}`;
+
+            pnlPctEl.textContent = `${isPositive ? '+' : ''}${pnlPercent.toFixed(2)}%`;
+            pnlPctEl.className = `text-xs font-bold px-2 py-0.5 rounded-full ${isPositive ? 'bg-emerald-500/15 text-emerald-400' : 'bg-rose-500/15 text-rose-400'}`;
+
+            pnlIconBg.className = `w-8 h-8 rounded-lg flex items-center justify-center ${isPositive ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`;
+            pnlIcon.setAttribute('data-lucide', isPositive ? 'trending-up' : 'trending-down');
+            if (window.lucide) lucide.createIcons();
+
+            document.getElementById('stat-net-pnl-exact').textContent = `${isPositive ? '+' : ''}${formatCoinsExact(netPnl)}`;
+            document.getElementById('stat-alerts-triggered').textContent = `${triggeredCount} / ${investments.length}`;
+        }
+
+        // ==========================================
+        // ITEM ACTIONS
+        // ==========================================
+        async function toggleSimulateTarget(uid) {
+            const inv = investments.find(i => i.uid === uid);
+            if (!inv) return;
+
+            if (inv.simulatedPrice !== null) {
+                inv.simulatedPrice = null;
+                inv.alertSent = false;
+                const live = getLivePriceForInvestment(inv);
+                if (live) inv.currentPrice = live;
+                showToast(t('toastSimOffTitle'), t('toastSimOffMsg', { name: inv.itemName }), 'info');
+            } else {
+                inv.simulatedPrice = Math.round(inv.targetPrice * 1.02);
+                inv.currentPrice = inv.simulatedPrice;
+                inv.alertSent = true;
+                playAlertChime();
+                await triggerDiscordAlert(inv, true);
+            }
+
+            saveInvestmentsToStorage();
+            renderInvestments();
+            updateSummaryStats();
+        }
+
+        function resetAlertStatus(uid) {
+            const inv = investments.find(i => i.uid === uid);
+            if (!inv) return;
+            inv.alertSent = false;
+            saveInvestmentsToStorage();
+            renderInvestments();
+            showToast(t('toastAlertResetTitle'), t('toastAlertResetMsg', { name: inv.itemName }), 'info');
+        }
+
+        function deleteInvestment(uid) {
+            investments = investments.filter(i => i.uid !== uid);
+            saveInvestmentsToStorage();
+            renderInvestments();
+            updateSummaryStats();
+            showToast(t('toastDeletedTitle'), t('toastDeletedMsg'), 'info');
+        }
+
+        function openEditModal(uid) {
+            const inv = investments.find(i => i.uid === uid);
+            if (!inv) return;
+            document.getElementById('edit-item-uid').value = uid;
+            document.getElementById('edit-modal-title').textContent = t('editModalTitle', { name: inv.itemName });
+            document.getElementById('edit-quantity').value = inv.quantity;
+            document.getElementById('edit-buy-price').value = inv.buyPrice;
+            document.getElementById('edit-target-price').value = inv.targetPrice;
+            document.getElementById('edit-modal').classList.remove('hidden');
+        }
+
+        function closeEditModal() {
+            document.getElementById('edit-modal').classList.add('hidden');
+        }
+
+        async function saveEditedInvestment() {
+            const uid = document.getElementById('edit-item-uid').value;
+            const inv = investments.find(i => i.uid === uid);
+            if (!inv) return;
+
+            const qty = parseInt(document.getElementById('edit-quantity').value, 10);
+            const buy = parseCoinInput(document.getElementById('edit-buy-price').value);
+            const target = parseCoinInput(document.getElementById('edit-target-price').value);
+
+            if (isNaN(qty) || qty <= 0 || isNaN(buy) || buy <= 0 || isNaN(target) || target <= 0) {
+                showToast(t('toastInvalidFormTitle'), t('toastInvalidFormMsg'), 'error');
+                return;
+            }
+
+            inv.quantity = qty;
+            inv.buyPrice = buy;
+            if (target > inv.currentPrice) {
+                inv.alertSent = false;
+            }
+            inv.targetPrice = target;
+
+            closeEditModal();
+            await updateInvestmentLivePrices();
+            renderInvestments();
+            updateSummaryStats();
+            showToast(t('toastUpdatedTitle'), t('toastUpdatedMsg', { name: inv.itemName }), 'success');
+        }
+
+        // ==========================================
+        // STORAGE, TIMERS & UI TOGGLES
+        // ==========================================
+        function saveInvestmentsToStorage() {
+            if (!currentUser) return;
+            localStorage.setItem(getUserKey('items'), JSON.stringify(investments));
+        }
+
+        function loadInitialData(isNewAccount = false) {
+            updateWebhookUI();
+
+            const savedSound = localStorage.getItem(getUserKey('sound'));
+            soundEnabled = savedSound !== null ? savedSound === 'true' : true;
+            updateSoundUI();
+
+            const savedInterval = localStorage.getItem(getUserKey('interval'));
+            refreshSeconds = savedInterval !== null ? parseInt(savedInterval, 10) : 60;
+            document.getElementById('refresh-interval').value = refreshSeconds;
+
+            // Support both new ('items') and previous ('investments') key seamlessly
+            const savedInvestments = localStorage.getItem(getUserKey('items')) || localStorage.getItem(getUserKey('investments'));
+            if (savedInvestments) {
+                try {
+                    investments = JSON.parse(savedInvestments);
+                } catch (e) {
+                    investments = [];
+                }
+            } else {
+                investments = [];
+                if (isNewAccount) saveInvestmentsToStorage();
+            }
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            if (currentUser) localStorage.setItem(getUserKey('sound'), soundEnabled);
+            updateSoundUI();
+            if (soundEnabled) playAlertChime();
+        }
+
+        function updateSoundUI() {
+            const icon = document.getElementById('sound-icon');
+            const label = document.getElementById('sound-label');
+            if (!icon || !label) return;
+            if (soundEnabled) {
+                icon.setAttribute('data-lucide', 'volume-2');
+                icon.className = 'w-4 h-4 text-amber-400';
+                label.textContent = t('soundOn');
+            } else {
+                icon.setAttribute('data-lucide', 'volume-x');
+                icon.className = 'w-4 h-4 text-gray-500';
+                label.textContent = t('soundOff');
+            }
+            if (window.lucide) lucide.createIcons();
+        }
+
+        function toggleGuide() {
+            const panel = document.getElementById('guide-panel');
+            const chevron = document.getElementById('guide-chevron');
+            panel.classList.toggle('hidden');
+            chevron.classList.toggle('rotate-180');
+        }
+
+        function updateRefreshInterval() {
+            refreshSeconds = parseInt(document.getElementById('refresh-interval').value, 10);
+            if (currentUser) localStorage.setItem(getUserKey('interval'), refreshSeconds);
+            startCountdownTimer();
+        }
+
+        function startCountdownTimer() {
+            if (countdownTimer) clearInterval(countdownTimer);
+            const badge = document.getElementById('countdown-badge');
+
+            if (refreshSeconds === 0) {
+                badge.textContent = t('manualOff');
+                return;
+            }
+
+            countdown = refreshSeconds;
+            badge.textContent = `${countdown}s`;
+
+            countdownTimer = setInterval(() => {
+                countdown--;
+                if (countdown <= 0) {
+                    countdown = refreshSeconds;
+                    fetchAllMarketData(false);
+                }
+                badge.textContent = `${countdown}s`;
+            }, 1000);
+        }
+
+        // ==========================================
+        // INITIALIZATION
+        // ==========================================
+        window.addEventListener('DOMContentLoaded', async () => {
+            setLanguage(currentLang);
+            if (window.lucide) lucide.createIcons();
+
+            const session = getSavedAuthSession();
+            const users = getUsersRegistry();
+            if (session && session.loggedIn && session.username && users[session.username]) {
+                await enterAppForUser(session.username, false);
+            } else {
+                localStorage.removeItem(GLOBAL_KEYS.SESSION);
+                sessionStorage.removeItem(GLOBAL_KEYS.SESSION);
+                document.getElementById('auth-overlay').classList.remove('hidden');
+                document.getElementById('app-wrapper').classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>
